@@ -5411,6 +5411,11 @@ button.close {
   height: 100%;
   width: 100%; }
 
+.config-control {
+  cursor: move !important;
+  background-color: white !important;
+  border: thin dotted #66afe9 !important; }
+
 [data-stereotype="process-step"] {
   background-image: url("icons/process.png"); }
 
@@ -5431,5 +5436,3 @@ button.close {
   height: 50%;
   top: 25%;
   margin: 0 auto; }
-
-/*# sourceMappingURL=spaircorp-ui.css.map */
