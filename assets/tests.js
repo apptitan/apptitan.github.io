@@ -81,6 +81,33 @@ define('spaircorp-ui/tests/components/config-textbox-control.lint-test', ['expor
     assert.ok(true, 'components/config-textbox-control.js should pass ESLint.\n');
   });
 });
+define('spaircorp-ui/tests/components/jsplumb-miniview.lint-test', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('ESLint - components/jsplumb-miniview.js');
+  QUnit.test('should pass ESLint', function (assert) {
+    assert.expect(1);
+    assert.ok(true, 'components/jsplumb-miniview.js should pass ESLint.\n');
+  });
+});
+define('spaircorp-ui/tests/components/jsplumb-palette.lint-test', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('ESLint - components/jsplumb-palette.js');
+  QUnit.test('should pass ESLint', function (assert) {
+    assert.expect(1);
+    assert.ok(true, 'components/jsplumb-palette.js should pass ESLint.\n');
+  });
+});
+define('spaircorp-ui/tests/components/jsplumb-toolkit.lint-test', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('ESLint - components/jsplumb-toolkit.js');
+  QUnit.test('should pass ESLint', function (assert) {
+    assert.expect(1);
+    assert.ok(false, 'components/jsplumb-toolkit.js should pass ESLint.\n13:7  - \'EMPTY_FUNCTION\' is assigned a value but never used. (no-unused-vars)\n26:5  - \'jsPlumbToolkit\' is not defined. (no-undef)\n36:21  - \'jsPlumbToolkit\' is not defined. (no-undef)\n41:11  - \'bootbox\' is not defined. (no-undef)\n51:29  - \'jsPlumbToolkitUtil\' is not defined. (no-undef)\n61:39  - \'edgeData\' is defined but never used. (no-unused-vars)\n63:13  - \'bootbox\' is not defined. (no-undef)\n68:36  - \'edgeType\' is defined but never used. (no-unused-vars)\n72:46  - \'edge\' is defined but never used. (no-unused-vars)\n75:38  - \'edge\' is defined but never used. (no-unused-vars)\n78:43  - \'edge\' is defined but never used. (no-unused-vars)\n90:9  - \'bootbox\' is not defined. (no-undef)\n197:23  - \'e\' is defined but never used. (no-unused-vars)\n206:13  - Unexpected console statement. (no-console)\n230:9  - \'jsPlumb\' is not defined. (no-undef)\n231:9  - \'jsPlumb\' is not defined. (no-undef)\n235:7  - \'jsPlumb\' is not defined. (no-undef)\n240:7  - \'jsPlumb\' is not defined. (no-undef)\n246:11  - \'jsPlumbToolkit\' is not defined. (no-undef)\n250:7  - \'jsPlumb\' is not defined. (no-undef)\n253:9  - \'bootbox\' is not defined. (no-undef)\n265:7  - \'jsPlumb\' is not defined. (no-undef)\n276:9  - \'bootbox\' is not defined. (no-undef)\n315:25  - \'type\' is defined but never used. (no-unused-vars)');
+  });
+});
 define('spaircorp-ui/tests/controllers/admin/scripts/edit.lint-test', ['exports'], function (exports) {
   'use strict';
 
@@ -416,7 +443,7 @@ define('spaircorp-ui/tests/routes/admin/scripts/edit.lint-test', ['exports'], fu
   QUnit.module('ESLint - routes/admin/scripts/edit.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(false, 'routes/admin/scripts/edit.js should pass ESLint.\n28:9  - \'bootbox\' is not defined. (no-undef)\n72:35  - \'scope\' is assigned a value but never used. (no-unused-vars)\n72:42  - \'connection\' is assigned a value but never used. (no-unused-vars)\n72:54  - \'dropEndpoint\' is assigned a value but never used. (no-unused-vars)\n89:13  - \'promise\' is assigned a value but never used. (no-unused-vars)\n127:27  - \'e\' is defined but never used. (no-unused-vars)\n132:9  - \'bootbox\' is not defined. (no-undef)');
+    assert.ok(false, 'routes/admin/scripts/edit.js should pass ESLint.\n14:7  - \'bootbox\' is not defined. (no-undef)\n25:16  - \'obj\' is defined but never used. (no-unused-vars)\n27:7  - Unexpected \'debugger\' statement. (no-debugger)\n56:9  - \'bootbox\' is not defined. (no-undef)\n99:7  - Unexpected \'debugger\' statement. (no-debugger)\n101:35  - \'scope\' is assigned a value but never used. (no-unused-vars)\n101:42  - \'connection\' is assigned a value but never used. (no-unused-vars)\n101:54  - \'dropEndpoint\' is assigned a value but never used. (no-unused-vars)\n118:13  - \'promise\' is assigned a value but never used. (no-unused-vars)\n156:27  - \'e\' is defined but never used. (no-unused-vars)\n161:9  - \'bootbox\' is not defined. (no-undef)');
   });
 });
 define('spaircorp-ui/tests/routes/admin/scripts/edit/process-step/edit.lint-test', ['exports'], function (exports) {

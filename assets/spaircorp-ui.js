@@ -114,6 +114,9 @@ define('spaircorp-ui/components/jsplumb-edge', ['exports', 'ember-jsplumb/compon
     }
   });
 });
+define('spaircorp-ui/components/jsplumb-miniview', ['exports', 'ember'], function (exports, _ember) {
+  exports['default'] = _ember['default'].Component.extend({});
+});
 define('spaircorp-ui/components/jsplumb-node', ['exports', 'ember-jsplumb/components/jsplumb-node'], function (exports, _emberJsplumbComponentsJsplumbNode) {
   Object.defineProperty(exports, 'default', {
     enumerable: true,
@@ -121,6 +124,9 @@ define('spaircorp-ui/components/jsplumb-node', ['exports', 'ember-jsplumb/compon
       return _emberJsplumbComponentsJsplumbNode['default'];
     }
   });
+});
+define('spaircorp-ui/components/jsplumb-palette', ['exports', 'ember'], function (exports, _ember) {
+  exports['default'] = _ember['default'].Component.extend({});
 });
 define('spaircorp-ui/components/jsplumb-tool', ['exports', 'ember-jsplumb/components/jsplumb-tool'], function (exports, _emberJsplumbComponentsJsplumbTool) {
   Object.defineProperty(exports, 'default', {
@@ -136,6 +142,327 @@ define('spaircorp-ui/components/jsplumb-toolbox', ['exports', 'ember-jsplumb/com
     get: function get() {
       return _emberJsplumbComponentsJsplumbToolbox['default'];
     }
+  });
+});
+define('spaircorp-ui/components/jsplumb-toolkit', ['exports', 'ember'], function (exports, _ember) {
+
+  // This function is what the toolkit will use to get an ID from a node.
+  var idFunction = function idFunction(n) {
+    return n.id;
+  };
+
+  // This function is what the toolkit will use to get the associated type from a node.
+  var typeFunction = function typeFunction(n) {
+    return n.type;
+  };
+
+  var EMPTY_FUNCTION = function EMPTY_FUNCTION() {};
+
+  /**
+   * @param data - object
+   *
+   */
+  exports['default'] = _ember['default'].Component.extend({
+
+    classNames: ['jsplumb-toolkit'],
+
+    didInsertElement: function didInsertElement() {
+      var _this = this;
+
+      var self = this;
+
+      jsPlumbToolkit.ready(function () {
+        // ------------------------ toolkit setup ------------------------------------
+
+        // get the various dom elements
+        var canvasElement = _this.$(".jtk-canvas");
+        var miniviewElement = _this.$(".miniview");
+        var nodePalette = _this.$(".node-palette");
+        var controls = _this.$(".controls");
+
+        // Declare an instance of the Toolkit, and supply the functions we will use to get ids and types from nodes.
+        var toolkit = jsPlumbToolkit.newInstance({
+          idFunction: idFunction,
+          typeFunction: typeFunction,
+          nodeFactory: function nodeFactory(type, data, _callback) {
+
+            bootbox.prompt({
+              title: "Enter " + type + " name:",
+              placeholder: 'Enter text here',
+              callback: function callback(text) {
+                data.text = text;
+                // if the user entered a name...
+                if (data.text) {
+                  // and it was at least 2 chars
+                  if (data.text.length >= 2) {
+                    // set an id and continue.
+                    data.id = jsPlumbToolkitUtil.uuid();
+                    _callback(data);
+                  } else {
+                    // else advise the user.
+                    alert(type + " names must be at least 2 characters!");
+                  }
+                }
+              }
+            });
+          },
+          beforeConnect: function beforeConnect(source, target, edgeData) {
+            if (source.getType() === 'start' && target.getType() === 'decision') {
+              bootbox.alert("You can't attatch a start node to a decision step");
+              return false;
+            }
+            return true;
+          },
+          beforeStartConnect: function beforeStartConnect(source, edgeType) {
+            // limit edges from start node to 1. if any other type of node, return
+            return source.data.type === "start" && source.getEdges().length > 0 ? false : { label: "" };
+          },
+          beforeMoveConnection: function beforeMoveConnection(source, target, edge) {
+            return true;
+          },
+          beforeDetach: function beforeDetach(source, target, edge) {
+            return true;
+          },
+          beforeStartDetach: function beforeStartDetach(source, target, edge) {
+            return true;
+          }
+        });
+
+        // ------------------------ / toolkit setup ------------------------------------
+
+        // ------------------------ rendering ------------------------------------
+
+        var _editLabel = function _editLabel(edge, deleteOnCancel) {
+
+          // TODO create action
+          bootbox.prompt({
+            title: "Enter Text:",
+            value: edge.data.label || "",
+            placeholder: 'Enter text here',
+            callback: function callback(text) {
+              if (text == null) {
+                if (deleteOnCancel) {
+                  toolkit.removeEdge(edge);
+                }
+              } else {
+                toolkit.updateEdge(edge, { label: text || "" });
+              }
+            }
+          });
+        };
+
+        // Instruct the toolkit to render to the 'canvas' element. We pass in a view of nodes, edges and ports, which
+        // together define the look and feel and behaviour of this renderer.  Note that we can have 0 - N renderers
+        // assigned to one instance of the Toolkit..
+        var renderer = window.renderer = toolkit.render({
+          container: canvasElement,
+          view: {
+            nodes: {
+              "start": {
+                template: "tmplStart"
+              },
+              "selectable": {
+                events: {
+                  tap: function tap(params) {
+                    toolkit.toggleSelection(params.node);
+                  }
+                }
+              },
+              "decision": {
+                parent: "selectable",
+                template: "tmplDecision"
+              },
+              "process": {
+                parent: "selectable",
+                template: "tmplProcess"
+              },
+              "finish": {
+                parent: "selectable",
+                template: "tmplFinish"
+              }
+            },
+            // There are two edge types defined - 'yes' and 'no', sharing a common
+            // parent.
+            edges: {
+              "default": {
+                anchor: "AutoDefault",
+                endpoint: "Blank",
+                connector: ["Flowchart", { cornerRadius: 5 }],
+                paintStyle: { strokeWidth: 2, stroke: "#f76258", outlineWidth: 3, outlineStroke: "transparent" }, //	paint style for this edge type.
+                hoverPaintStyle: { strokeWidth: 2, stroke: "rgb(67,67,67)" }, // hover paint style for this edge type.
+                events: {
+                  "dblclick": function dblclick(params) {
+                    if (self.attrs['on-dbl-click-edge']) {
+                      self.attrs['on-dbl-click-edge'](toolkit, params);
+                    }
+                  }
+                },
+                overlays: [["Arrow", { location: 1, width: 10, length: 10 }], ["Arrow", { location: 0.3, width: 10, length: 10 }]]
+              },
+              "connection": {
+                parent: "default",
+                overlays: [["Label", {
+                  label: "${label}",
+                  events: {
+                    click: function click(params) {
+                      _editLabel(params.edge);
+                    }
+                  }
+                }]]
+              }
+            },
+
+            ports: {
+              "start": {
+                edgeType: "default"
+              },
+              "source": {
+                maxConnections: -1,
+                edgeType: "connection"
+              },
+              "target": {
+                maxConnections: -1,
+                isTarget: true,
+                dropOptions: {
+                  hoverClass: "connection-drop"
+                }
+              }
+            }
+          },
+          // Layout the nodes using an absolute layout
+          layout: {
+            type: "Absolute"
+          },
+          events: {
+            canvasClick: function canvasClick(e) {
+              toolkit.clearSelection();
+            },
+            edgeAdded: function edgeAdded(params) {
+              if (params.addedByMouse) {
+                _editLabel(params.edge, true);
+              }
+            },
+            nodeDropped: function nodeDropped(info) {
+              console.log("node ", info.source.id, "dropped on ", info.target.id);
+            }
+          },
+          miniview: {
+            container: miniviewElement
+          },
+          lassoInvert: true,
+          elementsDroppable: true,
+          consumeRightClick: false,
+          dragOptions: {
+            filter: ".jtk-draw-handle, .node-action, .node-action i",
+            magnetize: true
+          }
+        });
+
+        // Load the data.
+        toolkit.load({
+          data: _this.attrs.data || {}
+        });
+
+        // listener for mode change on renderer.
+        renderer.bind("modeChanged", function (mode) {
+          //jsPlumb.removeClass(controls.querySelectorAll("[mode]"), "selected-mode");
+          //jsPlumb.addClass(controls.querySelectorAll("[mode='" + mode + "']"), "selected-mode");
+          jsPlumb.removeClass(controls.find("[mode]"), "selected-mode");
+          jsPlumb.addClass(controls.find("[mode='" + mode + "']"), "selected-mode");
+        });
+
+        // pan mode/select mode
+        jsPlumb.on(controls, "tap", "[mode]", function () {
+          renderer.setMode(this.getAttribute("mode"));
+        });
+
+        // on home button click, zoom content to fit.
+        jsPlumb.on(controls, "tap", "[reset]", function () {
+          toolkit.clearSelection();
+          renderer.zoomToFit();
+        });
+
+        // configure Drawing tools.
+        new jsPlumbToolkit.DrawingTools({
+          renderer: renderer
+        });
+
+        jsPlumb.on(canvasElement, "tap", ".node-delete", function () {
+          var info = renderer.getObjectInfo(this);
+
+          bootbox.confirm({
+            title: "Please Confirm",
+            message: "Delete '" + info.obj.data.text + "'",
+            callback: function callback(result) {
+              if (result) {
+                toolkit.removeNode(info.obj);
+              }
+            }
+          });
+        });
+
+        // change a question or action's label
+        jsPlumb.on(canvasElement, "tap", ".node-edit", function (e) {
+          // getObjectInfo is a method that takes some DOM element (this function's `this` is
+          // set to the element that fired the event) and returns the toolkit data object that
+          // relates to the element. it ascends through parent nodes until it finds a node that is
+          // registered with the toolkit.
+          var info = renderer.getObjectInfo(this);
+
+          if (self.attrs['on-edit-node']) {
+            self.attrs['on-edit-node']({ toolkit: toolkit, info: info, e: e });
+          }
+
+          bootbox.prompt({
+            title: "Edit " + info.obj.data.type + " name",
+            value: info.obj.data.text || "",
+            placeholder: 'Enter text here',
+            callback: function callback(text) {
+              if (text && text.length > 2) {
+                // if name is at least 2 chars long, update the underlying data and
+                // update the UI.s
+                info.obj.data.text = text;
+                toolkit.updateNode(info.obj, info.obj.data);
+              }
+            }
+          });
+        });
+
+        // ------------------------ / rendering ------------------------------------
+
+        // ------------------------ drag and drop new tables/views -----------------
+
+        //
+        // Here, we are registering elements that we will want to drop onto the workspace and have
+        // the toolkit recognise them as new nodes.
+        //
+        //  typeExtractor: this function takes an element and returns to jsPlumb the type of node represented by
+        //                 that element. In this application, that information is stored in the 'jtk-node-type' attribute.
+        //
+        //  dataGenerator: this function takes a node type and returns some default data for that node type.
+        //
+        renderer.registerDroppableNodes({
+          droppables: nodePalette.find("li"),
+          dragOptions: {
+            zIndex: 50000,
+            cursor: "move",
+            clone: true
+          },
+          typeExtractor: function typeExtractor(el) {
+            return el.getAttribute("jtk-node-type");
+          },
+          dataGenerator: function dataGenerator(type) {
+            return {
+              w: 120,
+              h: 80
+            };
+          }
+        });
+
+        // ------------------------ / drag and drop new tables/views -----------------
+      });
+    }
+
   });
 });
 define('spaircorp-ui/components/link-to-external', ['exports', 'ember-engines/-private/link-to-external-component'], function (exports, _emberEnginesPrivateLinkToExternalComponent) {
@@ -481,12 +808,101 @@ define('spaircorp-ui/config/asset-manifest', ['exports', 'spaircorp-ui/config/en
 define('spaircorp-ui/controllers/admin/scripts/edit', ['exports', 'ember'], function (exports, _ember) {
   exports['default'] = _ember['default'].Controller.extend({
 
+    autoSave: true,
+
     appController: _ember['default'].inject.controller('application'),
     currentRouteName: _ember['default'].computed.reads('appController.currentRouteName'),
 
     hasStartNode: _ember['default'].computed('model.steps.@each', function () {
       return this.get('model.steps').filterBy('stereotype', 'start-step');
-    })
+    }),
+
+    data: {
+      "nodes": [{
+        "id": "start",
+        "type": "start",
+        "text": "Start",
+        "left": 50,
+        "top": 50,
+        "w": 100,
+        "h": 70
+      }, {
+        "id": "question1",
+        "type": "decision",
+        "text": "Do Something?",
+        "left": 290,
+        "top": 79,
+        "w": 150,
+        "h": 150
+      }, {
+        "id": "decide",
+        "type": "process",
+        "text": "Make Decision",
+        "left": 660,
+        "top": 187,
+        "w": 120,
+        "h": 120
+      }, {
+        "id": "something",
+        "type": "finish",
+        "text": "Do Something",
+        "left": 827,
+        "top": 414,
+        "w": 120,
+        "h": 50
+      }, {
+        "id": "question2",
+        "type": "decision",
+        "text": "Do Nothing?",
+        "left": 74,
+        "top": 330,
+        "w": 150,
+        "h": 150
+      }, {
+        "id": "nothing",
+        "type": "finish",
+        "text": "Do Nothing",
+        "left": 433,
+        "top": 558,
+        "w": 100,
+        "h": 50
+      }],
+      "edges": [{
+        "id": 1,
+        "source": "start",
+        "target": "question1"
+      }, {
+        "id": 2,
+        "source": "question1",
+        "target": "decide",
+        "data": { "label": "yes", "type": "connection" }
+      }, {
+        "id": 3,
+        "source": "question1",
+        "target": "question2",
+        "data": { "label": "no", "type": "connection" }
+      }, {
+        "id": 4,
+        "source": "question2",
+        "target": "decide",
+        "data": { "label": "no", "type": "connection" }
+      }, {
+        "id": 5,
+        "source": "question2",
+        "target": "nothing",
+        "data": { "label": "yes", "type": "connection" }
+      }, {
+        "id": 6,
+        "source": "decide",
+        "target": "nothing",
+        "data": { "label": "Can't Decide", "type": "connection" }
+      }, {
+        "id": 7,
+        "source": "decide",
+        "target": "something",
+        "data": { "label": "Decision Made", "type": "connection" }
+      }]
+    }
 
     // endpoints: [{
     //   isSource: true,
@@ -2525,6 +2941,24 @@ define('spaircorp-ui/routes/admin/scripts/edit', ['exports', 'ember'], function 
 
     actions: {
 
+      onDblClickEdge: function onDblClickEdge(toolkit, params) {
+        bootbox.confirm({
+          title: "Please Confirm",
+          message: "Delete Edge?",
+          callback: function callback(result) {
+            if (result) {
+              toolkit.removeEdge(params.edge);
+            }
+          }
+        });
+      },
+
+      onEditNode: function onEditNode(obj) {
+        // FIXMe hard coded process
+        debugger;
+        this.transitionTo('admin.scripts.edit.process-step.edit', this.modelFor(this.routeName), 1);
+      },
+
       save: function save() {
         alert('TODO');
         return _ember['default'].RSVP.resolve();
@@ -2592,6 +3026,7 @@ define('spaircorp-ui/routes/admin/scripts/edit', ['exports', 'ember'], function 
         var _this2 = this;
 
         _ember['default'].debug('before drop');
+        debugger;
 
         var sourceId = params.sourceId;
         var targetId = params.targetId;
@@ -2820,7 +3255,7 @@ define("spaircorp-ui/templates/admin/scripts", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template({ "id": "ICHzcUK9", "block": "{\"statements\":[[\"append\",[\"unknown\",[\"outlet\"]],false]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts.hbs" } });
 });
 define("spaircorp-ui/templates/admin/scripts/edit", ["exports"], function (exports) {
-  exports["default"] = Ember.HTMLBars.template({ "id": "nCEZzPIF", "block": "{\"statements\":[[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-group\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"label\",[]],[\"static-attr\",\"for\",\"script-name\"],[\"flush-element\"],[\"text\",\"Name\"],[\"close-element\"],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"one-way-input\"],[[\"get\",[\"model\",\"name\"]]],[[\"placeholder\",\"update\",\"class\"],[\"Name\",[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"model\",\"name\"]]],null]],null],\"form-control\"]]],false],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"diagram\"],[\"flush-element\"],[\"text\",\"\\n\"],[\"block\",[\"jsplumb-toolbox\"],null,null,12],[\"text\",\"\\n\"],[\"block\",[\"jsplumb-container\"],null,[[\"types\",\"before-drop\",\"before-detach\",\"on-create-node\"],[[\"helper\",[\"readonly\"],[[\"get\",[\"connectionTypes\"]]],null],[\"helper\",[\"route-action\"],[\"beforeDrop\"],null],[\"helper\",[\"route-action\"],[\"beforeDetach\"],null],[\"helper\",[\"route-action\"],[\"onCreateNode\"],null]]],6],[\"text\",\"\\n  \"],[\"append\",[\"unknown\",[\"outlet\"]],false],[\"text\",\"\\n\\n\"],[\"text\",\"\\n\\n\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[{\"statements\":[[\"text\",\"      \"],[\"append\",[\"helper\",[\"container\",\"edge\"],null,[[\"source\",\"target\",\"jsplumb-options\"],[[\"helper\",[\"readonly\"],[[\"helper\",[\"concat\"],[[\"get\",[\"connection\",\"fromStep\",\"screenId\"]],\"_source_\",[\"get\",[\"index\"]]],null]],null],[\"helper\",[\"readonly\"],[[\"helper\",[\"concat\"],[[\"get\",[\"connection\",\"toStep\",\"screenId\"]],\"_target_\",[\"get\",[\"index\"]]],null]],null],[\"helper\",[\"hash\"],null,null]]]],false],[\"text\",\"\\n\"]],\"locals\":[\"connection\",\"index\"]},{\"statements\":[[\"text\",\"            \"],[\"open-element\",\"span\",[]],[\"flush-element\"],[\"append\",[\"unknown\",[\"step\",\"title\"]],false],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"            \"],[\"append\",[\"helper\",[\"content-editable\"],null,[[\"value\",\"placeholder\",\"type\"],[[\"get\",[\"step\",\"name\"]],\"Enter a name\",\"text\"]]],false],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"style\",\"padding: 2px\"],[\"static-attr\",\"class\",\"fa fa-spinner fa-pulse fa-1x fa-fw pull-right\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"        \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"centre-content\"],[\"flush-element\"],[\"text\",\"\\n\"],[\"block\",[\"if\"],[[\"get\",[\"step\",\"isSaving\"]]],null,3],[\"text\",\"\\n\"],[\"block\",[\"if\"],[[\"get\",[\"step\",\"hasCustomTitle\"]]],null,2,1],[\"text\",\"        \"],[\"close-element\"],[\"text\",\"\\n\\n\\n\"]],\"locals\":[\"node\"]},{\"statements\":[[\"text\",\"      \"],[\"comment\",\" on-update=(action 'onUpdateNode') \"],[\"text\",\"\\n\"],[\"block\",[\"container\",\"node\"],null,[[\"id\",\"draggable\",\"on-double-click\",\"jsplumb-endpoints\",\"jsplumb-target\",\"stereotype\",\"type\",\"left\",\"top\",\"width\",\"height\"],[[\"helper\",[\"readonly\"],[[\"get\",[\"step\",\"screenId\"]]],null],true,[\"helper\",[\"route-action\"],[\"doubleClickNode\",[\"get\",[\"step\"]]],null],[\"helper\",[\"readonly\"],[[\"get\",[\"step\",\"jsplumbEndpoints\"]]],null],[\"helper\",[\"readonly\"],[[\"get\",[\"step\",\"jsPlumbTarget\"]]],null],[\"helper\",[\"readonly\"],[[\"get\",[\"step\",\"stereotype\"]]],null],[\"helper\",[\"readonly\"],[[\"get\",[\"step\",\"stereotype\"]]],null],[\"helper\",[\"readonly\"],[[\"get\",[\"step\",\"left\"]]],null],[\"helper\",[\"readonly\"],[[\"get\",[\"step\",\"top\"]]],null],[\"helper\",[\"readonly\"],[[\"get\",[\"step\",\"width\"]]],null],[\"helper\",[\"readonly\"],[[\"get\",[\"step\",\"height\"]]],null]]],4]],\"locals\":[\"step\"]},{\"statements\":[[\"text\",\"\\n\"],[\"block\",[\"each\"],[[\"get\",[\"model\",\"steps\"]]],null,5],[\"text\",\"\\n\"],[\"block\",[\"each\"],[[\"get\",[\"model\",\"connections\"]]],null,0],[\"text\",\"\\n\"]],\"locals\":[\"container\"]},{\"statements\":[[\"text\",\"      \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"centre-content\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"h5\"],[\"static-attr\",\"style\",\"color: black\"],[\"flush-element\"],[\"text\",\"Finish\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"        \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"centre-content\"],[\"flush-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"h5\"],[\"static-attr\",\"style\",\"color: black\"],[\"flush-element\"],[\"text\",\"Decision\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"        \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"centre-content\"],[\"flush-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"h5\"],[\"static-attr\",\"style\",\"color: black\"],[\"flush-element\"],[\"text\",\"Process\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"        \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"centre-content\"],[\"flush-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"h5\"],[\"static-attr\",\"style\",\"color: black\"],[\"flush-element\"],[\"text\",\"Start\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"block\",[\"toolbox\",\"tool\"],null,[[\"stereotype\"],[\"start\"]],10]],\"locals\":[]},{\"statements\":[[\"block\",[\"if\"],[[\"helper\",[\"not\"],[[\"get\",[\"hasStartNode\"]]],null]],null,11],[\"block\",[\"toolbox\",\"tool\"],null,[[\"stereotype\"],[\"process\"]],9],[\"block\",[\"toolbox\",\"tool\"],null,[[\"stereotype\"],[\"decision\"]],8],[\"block\",[\"toolbox\",\"tool\"],null,[[\"stereotype\"],[\"finish\"]],7],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"position: absolute; bottom: 0; width: 100%\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"append\",[\"helper\",[\"async-button\"],null,[[\"class\",\"action\",\"default\",\"pending\"],[\"btn btn-default btn-block\",[\"helper\",[\"route-action\"],[\"test\",[\"get\",[\"model\"]]],null],\"Test\",\"Please wait...\"]]],false],[\"text\",\"\\n    \"],[\"append\",[\"helper\",[\"async-button\"],null,[[\"class\",\"action\",\"default\",\"pending\"],[\"btn btn-primary btn-block\",[\"helper\",[\"route-action\"],[\"save\",[\"get\",[\"model\"]]],null],\"Save\",\"Saving...\"]]],false],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n\\n\"]],\"locals\":[\"toolbox\"]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts/edit.hbs" } });
+  exports["default"] = Ember.HTMLBars.template({ "id": "e/FhlYDB", "block": "{\"statements\":[[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-group\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"label\",[]],[\"static-attr\",\"for\",\"script-name\"],[\"flush-element\"],[\"text\",\"Name\"],[\"close-element\"],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"one-way-input\"],[[\"get\",[\"model\",\"name\"]]],[[\"placeholder\",\"update\",\"class\"],[\"Name\",[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"model\",\"name\"]]],null]],null],\"form-control\"]]],false],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"checkbox\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"label\",[]],[\"flush-element\"],[\"append\",[\"helper\",[\"one-way-checkbox\"],[[\"get\",[\"autoSave\"]]],[[\"update\"],[[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"autoSave\"]]],null]],null]]]],false],[\"text\",\"Auto Save\"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"open-element\",\"hr\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"block\",[\"jsplumb-toolkit\"],null,[[\"data\",\"on-dbl-click-edge\",\"on-edit-node\",\"before-drop\"],[[\"helper\",[\"readonly\"],[[\"get\",[\"data\"]]],null],[\"helper\",[\"route-action\"],[\"onDblClickEdge\"],null],[\"helper\",[\"route-action\"],[\"onEditNode\"],null],[\"helper\",[\"route-action\"],[\"beforeDrop\"],null]]],0],[\"text\",\"\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"row\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"hr\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"async-button\"],null,[[\"class\",\"action\",\"default\",\"pending\"],[\"btn btn-default col-xs-6\",[\"helper\",[\"route-action\"],[\"test\",[\"get\",[\"model\"]]],null],\"Test\",\"Please wait...\"]]],false],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"async-button\"],null,[[\"class\",\"action\",\"default\",\"pending\"],[\"btn btn-primary col-xs-6\",[\"helper\",[\"route-action\"],[\"save\",[\"get\",[\"model\"]]],null],\"Save\",\"Saving...\"]]],false],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\\n\\n\\n\\n\\n\"],[\"text\",\"\\n\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[{\"statements\":[[\"text\",\"\\n  \"],[\"append\",[\"unknown\",[\"outlet\"]],false],[\"text\",\"\\n\"]],\"locals\":[]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts/edit.hbs" } });
 });
 define("spaircorp-ui/templates/admin/scripts/edit/process-step/edit", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template({ "id": "opkIbQQK", "block": "{\"statements\":[[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"animated slideInRight diagram-overlay\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"row\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"col-xs-12\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"button\",[]],[\"static-attr\",\"class\",\"btn btn-danger\"],[\"dynamic-attr\",\"onclick\",[\"helper\",[\"route-action\"],[\"close\"],null],null],[\"flush-element\"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-times fa-2x\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"h4 text-muted\"],[\"flush-element\"],[\"append\",[\"unknown\",[\"model\",\"name\"]],false],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"row\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"col-xs-4\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"padding-left:3px\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"h3\",[]],[\"flush-element\"],[\"text\",\"Controls\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"textbox-control\",\"control-toolbox\"]]]]],11],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"textarea-control\",\"control-toolbox\"]]]]],10],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"checkbox-control\",\"control-toolbox\"]]]]],9],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"currency-control\",\"control-toolbox\"]]]]],8],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"date-control\",\"control-toolbox\"]]]]],7],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"list-control\",\"control-toolbox\"]]]]],6],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"number-control\",\"control-toolbox\"]]]]],5],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"radio-control\",\"control-toolbox\"]]]]],4],[\"text\",\"      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"col-xs-8\"],[\"flush-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object-target\"],null,[[\"action\",\"class\"],[\"add\",\"controls\"]],3],[\"text\",\"    \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\\n\\n\\n\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[{\"statements\":[[\"text\",\"              \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"cursor: move\"],[\"static-attr\",\"class\",\"js-control-drag-handle\"],[\"flush-element\"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-sort\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" \"],[\"open-element\",\"small\",[]],[\"flush-element\"],[\"append\",[\"unknown\",[\"control\",\"title\"]],false],[\"close-element\"],[\"close-element\"],[\"text\",\"\\n              \"],[\"append\",[\"helper\",[\"component\"],[[\"helper\",[\"concat\"],[\"config-\",[\"get\",[\"control\",\"controlType\"]],\"-control\"],null]],[[\"control\"],[[\"get\",[\"control\"]]]]],false],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"block\",[\"draggable-object\"],null,[[\"class\",\"content\",\"isSortable\",\"sortingScope\",\"dragHandle\"],[\"control-group\",[\"get\",[\"control\"]],true,\"sortingGroup\",\".js-control-drag-handle\"]],0]],\"locals\":[\"control\"]},{\"statements\":[[\"text\",\" \"],[\"text\",\"\\n\"],[\"block\",[\"each\"],[[\"get\",[\"model\",\"controls\"]]],null,1]],\"locals\":[]},{\"statements\":[[\"text\",\"        \"],[\"block\",[\"sortable-objects\"],null,[[\"sortableObjectList\",\"enableSort\",\"useSwap\",\"sortingScope\"],[[\"get\",[\"model\",\"controls\"]],true,true,\"sortingGroup\"]],2]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"radio form-control config-control\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"label\",[]],[\"flush-element\"],[\"text\",\"\\n              \"],[\"open-element\",\"input\",[]],[\"static-attr\",\"type\",\"radio\"],[\"static-attr\",\"checked\",\"\"],[\"static-attr\",\"disabled\",\"\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"Radio\\n            \"],[\"close-element\"],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"input-group\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"input-group-addon\"],[\"flush-element\"],[\"text\",\"#\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"input\",[]],[\"static-attr\",\"type\",\"number\"],[\"static-attr\",\"class\",\"form-control config-control\"],[\"static-attr\",\"readonly\",\"\"],[\"static-attr\",\"placeholder\",\"Number\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"select\",[]],[\"static-attr\",\"class\",\"form-control config-control\"],[\"static-attr\",\"disabled\",\"\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"option\",[]],[\"static-attr\",\"selected\",\"\"],[\"flush-element\"],[\"text\",\"List\"],[\"close-element\"],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"input-group\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"input-group-addon\"],[\"flush-element\"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-calendar\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"input\",[]],[\"static-attr\",\"type\",\"date\"],[\"static-attr\",\"class\",\"form-control config-control\"],[\"static-attr\",\"readonly\",\"\"],[\"static-attr\",\"value\",\"Date Picker\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"input-group\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"input-group-addon\"],[\"flush-element\"],[\"text\",\"$\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"input\",[]],[\"static-attr\",\"type\",\"number\"],[\"static-attr\",\"class\",\"form-control config-control\"],[\"static-attr\",\"readonly\",\"\"],[\"static-attr\",\"placeholder\",\"Currency\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"checkbox form-control config-control\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"label\",[]],[\"flush-element\"],[\"text\",\"\\n              \"],[\"open-element\",\"input\",[]],[\"static-attr\",\"type\",\"checkbox\"],[\"static-attr\",\"checked\",\"\"],[\"static-attr\",\"disabled\",\"\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" Checkbox\\n            \"],[\"close-element\"],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"textarea\",[]],[\"static-attr\",\"class\",\"form-control config-control\"],[\"static-attr\",\"readonly\",\"\"],[\"flush-element\"],[\"text\",\"Text Area\"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"input\",[]],[\"static-attr\",\"class\",\"form-control config-control\"],[\"static-attr\",\"value\",\"Textbox\"],[\"static-attr\",\"readonly\",\"\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts/edit/process-step/edit.hbs" } });
@@ -2866,6 +3301,15 @@ define("spaircorp-ui/templates/components/draggable-object-target", ["exports"],
 });
 define("spaircorp-ui/templates/components/draggable-object", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template({ "id": "S0NBIDv5", "block": "{\"statements\":[[\"block\",[\"if\"],[[\"get\",[\"enableClicking\"]]],null,1,0]],\"locals\":[],\"named\":[],\"yields\":[\"default\"],\"blocks\":[{\"statements\":[[\"text\",\"  \"],[\"yield\",\"default\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"  \"],[\"open-element\",\"a\",[]],[\"static-attr\",\"href\",\"#\"],[\"modifier\",[\"action\"],[[\"get\",[null]],\"selectForDrag\"]],[\"flush-element\"],[\"text\",\"\\n    \"],[\"yield\",\"default\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/components/draggable-object.hbs" } });
+});
+define("spaircorp-ui/templates/components/jsplumb-miniview", ["exports"], function (exports) {
+  exports["default"] = Ember.HTMLBars.template({ "id": "TZy9LdB6", "block": "{\"statements\":[[\"yield\",\"default\"],[\"text\",\"\\n\"]],\"locals\":[],\"named\":[],\"yields\":[\"default\"],\"blocks\":[],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/components/jsplumb-miniview.hbs" } });
+});
+define("spaircorp-ui/templates/components/jsplumb-palette", ["exports"], function (exports) {
+  exports["default"] = Ember.HTMLBars.template({ "id": "2rhE3AGg", "block": "{\"statements\":[[\"yield\",\"default\"],[\"text\",\"\\n\"]],\"locals\":[],\"named\":[],\"yields\":[\"default\"],\"blocks\":[],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/components/jsplumb-palette.hbs" } });
+});
+define("spaircorp-ui/templates/components/jsplumb-toolkit", ["exports"], function (exports) {
+  exports["default"] = Ember.HTMLBars.template({ "id": "Pb562632", "block": "{\"statements\":[[\"comment\",\" the node palette \"],[\"text\",\"\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"sidebar node-palette\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"ul\",[]],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"li\",[]],[\"static-attr\",\"jtk-node-type\",\"start\"],[\"static-attr\",\"title\",\"Drag to add new\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"height\",\"100\"],[\"static-attr\",\"width\",\"100\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"circle\",[]],[\"static-attr\",\"cx\",\"50\"],[\"static-attr\",\"cy\",\"50\"],[\"static-attr\",\"r\",\"50\"],[\"static-attr\",\"stroke-width\",\"3\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"circle\",[]],[\"static-attr\",\"cx\",\"50\"],[\"static-attr\",\"cy\",\"50\"],[\"static-attr\",\"r\",\"40\"],[\"static-attr\",\"stroke-width\",\"3\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"50\"],[\"static-attr\",\"y\",\"50\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"Start\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"li\",[]],[\"static-attr\",\"jtk-node-type\",\"decision\"],[\"static-attr\",\"title\",\"Drag to add new\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"width\",\"120\"],[\"static-attr\",\"height\",\"120\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"rect\",[]],[\"static-attr\",\"y\",\"50\"],[\"static-attr\",\"x\",\"50\"],[\"static-attr\",\"width\",\"80\"],[\"static-attr\",\"height\",\"80\"],[\"static-attr\",\"transform\",\"rotate(45 115 40)\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"x\",\"10\"],[\"static-attr\",\"y\",\"10\"],[\"flush-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"rect\",[]],[\"static-attr\",\"width\",\"60\"],[\"static-attr\",\"height\",\"60\"],[\"static-attr\",\"transform\",\"rotate(45 20 65)\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"60\"],[\"static-attr\",\"y\",\"60\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"Decision\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"li\",[]],[\"static-attr\",\"jtk-node-type\",\"process\"],[\"static-attr\",\"title\",\"Drag to add new\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"height\",\"100\"],[\"static-attr\",\"width\",\"100\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"rect\",[]],[\"static-attr\",\"width\",\"100\"],[\"static-attr\",\"height\",\"100\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"x\",\"10\"],[\"static-attr\",\"y\",\"10\"],[\"flush-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"rect\",[]],[\"static-attr\",\"width\",\"80\"],[\"static-attr\",\"height\",\"80\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"50\"],[\"static-attr\",\"y\",\"50\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"Process\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"li\",[]],[\"static-attr\",\"jtk-node-type\",\"output\"],[\"static-attr\",\"title\",\"Drag to add new\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"height\",\"100\"],[\"static-attr\",\"width\",\"100\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"circle\",[]],[\"static-attr\",\"cx\",\"50\"],[\"static-attr\",\"cy\",\"50\"],[\"static-attr\",\"r\",\"50\"],[\"static-attr\",\"stroke-width\",\"3\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"circle\",[]],[\"static-attr\",\"cx\",\"50\"],[\"static-attr\",\"cy\",\"50\"],[\"static-attr\",\"r\",\"40\"],[\"static-attr\",\"stroke-width\",\"3\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"50\"],[\"static-attr\",\"y\",\"50\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"Finish\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"yield\",\"default\"],[\"text\",\"\\n\\n\"],[\"comment\",\" this is the main drawing area \"],[\"text\",\"\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"jtk-canvas\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"comment\",\" controls \"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"controls\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-arrows selected-mode\"],[\"static-attr\",\"mode\",\"pan\"],[\"static-attr\",\"title\",\"Pan Mode\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-pencil\"],[\"static-attr\",\"mode\",\"select\"],[\"static-attr\",\"title\",\"Select Mode\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-home\"],[\"static-attr\",\"reset\",\"\"],[\"static-attr\",\"title\",\"Zoom To Fit\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"comment\",\" miniview \"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"miniview\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\"],[\"open-element\",\"script\",[]],[\"static-attr\",\"type\",\"jtk\"],[\"static-attr\",\"id\",\"tmplStart\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"left:${left}px;top:${top}px;width:${w}px;height:${h}px;\"],[\"static-attr\",\"class\",\"flowchart-object flowchart-start\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"position:relative\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"svg:svg\",[]],[\"static-attr\",\"width\",\"${w}\"],[\"static-attr\",\"height\",\"${h}\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:ellipse\",[]],[\"static-attr\",\"cx\",\"${w/2}\"],[\"static-attr\",\"cy\",\"${h/2}\"],[\"static-attr\",\"rx\",\"${w/2}\"],[\"static-attr\",\"ry\",\"${h/2}\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:ellipse\",[]],[\"static-attr\",\"cx\",\"${w/2}\"],[\"static-attr\",\"cy\",\"${h/2}\"],[\"static-attr\",\"rx\",\"${(w/2) - 10}\"],[\"static-attr\",\"ry\",\"${(h/2) - 10}\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"${ w / 2 }\"],[\"static-attr\",\"y\",\"${ h / 2 }\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"${text}\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"jtk-source\",[]],[\"static-attr\",\"port-type\",\"start\"],[\"static-attr\",\"filter\",\".outer\"],[\"static-attr\",\"filter-negate\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"open-element\",\"script\",[]],[\"static-attr\",\"type\",\"jtk\"],[\"static-attr\",\"id\",\"tmplProcess\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"left:${left}px;top:${top}px;width:${w}px;height:${h}px;\"],[\"static-attr\",\"class\",\"flowchart-object flowchart-process\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"position:relative\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"node-edit node-action\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-pencil-square-o\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"node-delete node-action\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-times\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"svg:svg\",[]],[\"static-attr\",\"width\",\"${w}\"],[\"static-attr\",\"height\",\"${h}\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:rect\",[]],[\"static-attr\",\"x\",\"0\"],[\"static-attr\",\"y\",\"0\"],[\"static-attr\",\"width\",\"${w}\"],[\"static-attr\",\"height\",\"${h}\"],[\"static-attr\",\"class\",\"outer drag-start\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:rect\",[]],[\"static-attr\",\"x\",\"10\"],[\"static-attr\",\"y\",\"10\"],[\"static-attr\",\"width\",\"${w-20}\"],[\"static-attr\",\"height\",\"${h-20}\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"${w/2}\"],[\"static-attr\",\"y\",\"${h/2}\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"${text}\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"jtk-target\",[]],[\"static-attr\",\"port-type\",\"target\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"jtk-source\",[]],[\"static-attr\",\"port-type\",\"source\"],[\"static-attr\",\"filter\",\".outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"open-element\",\"script\",[]],[\"static-attr\",\"type\",\"jtk\"],[\"static-attr\",\"id\",\"tmplDecision\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"left:${left}px;top:${top}px;width:${w}px;height:${h}px;\"],[\"static-attr\",\"class\",\"flowchart-object flowchart-decision\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"position:relative\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"node-edit node-action\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-pencil-square-o\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"node-delete node-action\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-times\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"svg:svg\",[]],[\"static-attr\",\"width\",\"${w}\"],[\"static-attr\",\"height\",\"${h}\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:path\",[]],[\"static-attr\",\"d\",\"M ${w/2} 0 L ${w} ${h/2} L ${w/2} ${h} L 0 ${h/2} Z\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:path\",[]],[\"static-attr\",\"d\",\"M ${w/2} 10 L ${w-10} ${h/2} L ${w/2} ${h-10} L 10 ${h/2} Z\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"${w/2}\"],[\"static-attr\",\"y\",\"${h/2}\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"${text}\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"jtk-source\",[]],[\"static-attr\",\"port-type\",\"source\"],[\"static-attr\",\"filter\",\".outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"jtk-target\",[]],[\"static-attr\",\"port-type\",\"target\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"open-element\",\"script\",[]],[\"static-attr\",\"type\",\"jtk\"],[\"static-attr\",\"id\",\"tmplFinish\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"left:${left}px;top:${top}px;width:${w}px;height:${h}px;\"],[\"static-attr\",\"class\",\"flowchart-object flowchart-finish\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"position:relative\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"node-edit node-action\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-pencil-square-o\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"node-delete node-action\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-times\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"svg:svg\",[]],[\"static-attr\",\"width\",\"${w}\"],[\"static-attr\",\"height\",\"${h}\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:rect\",[]],[\"static-attr\",\"x\",\"0\"],[\"static-attr\",\"y\",\"0\"],[\"static-attr\",\"width\",\"${w}\"],[\"static-attr\",\"height\",\"${h}\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"${w/2}\"],[\"static-attr\",\"y\",\"${h/2}\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"${text}\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"jtk-target\",[]],[\"static-attr\",\"port-type\",\"target\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"comment\",\" edit text (question or action or output or edge label) \"],[\"text\",\"\\n\\n\"]],\"locals\":[],\"named\":[],\"yields\":[\"default\"],\"blocks\":[],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/components/jsplumb-toolkit.hbs" } });
 });
 define("spaircorp-ui/templates/components/object-bin", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template({ "id": "m+7o/FOB", "block": "{\"statements\":[[\"block\",[\"draggable-object-target\"],null,[[\"action\"],[\"handleObjectDropped\"]],2]],\"locals\":[],\"named\":[],\"yields\":[\"default\"],\"blocks\":[{\"statements\":[[\"text\",\"      \"],[\"yield\",\"default\",[[\"get\",[\"obj\"]]]],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"block\",[\"draggable-object\"],null,[[\"action\",\"content\"],[\"handleObjectDragged\",[\"get\",[\"obj\"]]]],0]],\"locals\":[\"obj\"]},{\"statements\":[[\"text\",\"  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"object-bin-title\"],[\"flush-element\"],[\"append\",[\"unknown\",[\"name\"]],false],[\"close-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"each\"],[[\"get\",[\"model\"]]],null,1]],\"locals\":[]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/components/object-bin.hbs" } });
