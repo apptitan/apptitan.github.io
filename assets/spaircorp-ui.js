@@ -185,32 +185,74 @@ define('spaircorp-ui/components/jsplumb-toolkit', ['exports', 'ember'], function
           idFunction: idFunction,
           typeFunction: typeFunction,
           nodeFactory: function nodeFactory(type, data, _callback) {
+            var isStartNode = type === 'start';
+            var isFinishNode = type === 'finish';
 
-            bootbox.prompt({
-              title: "Enter " + type + " name:",
-              placeholder: 'Enter text here',
-              callback: function callback(text) {
-                data.text = text;
-                // if the user entered a name...
-                if (data.text) {
-                  // and it was at least 2 chars
-                  if (data.text.length >= 2) {
-                    // set an id and continue.
-                    data.id = jsPlumbToolkitUtil.uuid();
-                    _callback(data);
-                  } else {
-                    // else advise the user.
-                    alert(type + " names must be at least 2 characters!");
+            // Rule: Can only insert a single start node
+            debugger;
+            if (isStartNode) {
+              var startNodes = toolkit.filter(function (obj) {
+                return obj.objectType === "Node" && obj.getType() == 'start';
+              });
+              if (startNodes.getAll().length > 0) {
+                bootbox.alert("You can only have a single start node per graph");
+                return false;
+              }
+            }
+
+            // FIXME DUPLICATE CODE ...
+            // Rule: Can only insert a single finish node
+            if (isFinishNode) {
+              var finishNodes = toolkit.filter(function (obj) {
+                return obj.objectType === "Node" && obj.getType() == 'finish';
+              });
+              if (finishNodes.getAll().length > 0) {
+                bootbox.alert("You can only have a single finish node per graph");
+                return false;
+              }
+            }
+
+            var canNameNode = !isStartNode && !isFinishNode;
+
+            if (canNameNode) {
+              bootbox.prompt({
+                title: "Enter " + type + " name:",
+                placeholder: 'Enter text here',
+                callback: function callback(text) {
+                  data.text = text;
+                  // if the user entered a name...
+                  if (data.text) {
+                    // and it was at least 2 chars
+                    if (data.text.length >= 2) {
+                      // set an id and continue.
+                      data.id = jsPlumbToolkitUtil.uuid();
+                      _callback(data);
+                    } else {
+                      // else advise the user.
+                      alert(type + " names must be at least 2 characters!");
+                    }
                   }
                 }
-              }
-            });
+              });
+            } else {
+              data.id = jsPlumbToolkitUtil.uuid();
+              data.text = type.toUpperCase();
+              _callback(data);
+            }
           },
           beforeConnect: function beforeConnect(source, target, edgeData) {
+            // Rule: can't connect a start node to a decision node
             if (source.getType() === 'start' && target.getType() === 'decision') {
-              bootbox.alert("You can't attatch a start node to a decision step");
+              bootbox.alert("You can't attatch a start node to a decision node");
               return false;
             }
+
+            // Rule: can't connect a start node to a finish node
+            if (source.getType() === 'start' && target.getType() === 'finish') {
+              bootbox.alert("You can't attatch a start node to a finish node");
+              return false;
+            }
+
             return true;
           },
           beforeStartConnect: function beforeStartConnect(source, edgeType) {
@@ -3051,7 +3093,7 @@ catch(err) {
 /* jshint ignore:start */
 
 if (!runningTests) {
-  require("spaircorp-ui/app")["default"].create({"name":"spaircorp-ui","version":"0.0.0+59044944"});
+  require("spaircorp-ui/app")["default"].create({"name":"spaircorp-ui","version":"0.0.0+040021ed"});
 }
 
 /* jshint ignore:end */
