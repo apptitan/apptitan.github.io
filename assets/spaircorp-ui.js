@@ -221,7 +221,7 @@ define('spaircorp-ui/components/jsplumb-toolkit', ['exports', 'ember'], function
             }
 
             // Rule: processes only allowed multiple entry and 1 exit
-            if (source.data.type === "process" && source.getEdges().length > 0) {
+            if (source.data.type === "process" && source.getSourceEdges().length > 0) {
               return false;
             }
 
@@ -327,7 +327,6 @@ define('spaircorp-ui/components/jsplumb-toolkit', ['exports', 'ember'], function
                   label: "${label}",
                   events: {
                     click: function click(params) {
-                      debugger;
                       _editLabel(params.edge);
                     }
                   }
@@ -385,7 +384,6 @@ define('spaircorp-ui/components/jsplumb-toolkit', ['exports', 'ember'], function
         });
 
         // Load the data.
-        debugger;
         toolkit.load({
           data: _this.attrs.data || {}
         });
@@ -2537,7 +2535,6 @@ define('spaircorp-ui/routes/admin/scripts/edit', ['exports', 'ember'], function 
         var _this2 = this;
 
         _ember['default'].debug('before drop');
-        debugger;
 
         var sourceId = params.sourceId;
         var targetId = params.targetId;
@@ -3054,7 +3051,7 @@ catch(err) {
 /* jshint ignore:start */
 
 if (!runningTests) {
-  require("spaircorp-ui/app")["default"].create({"name":"spaircorp-ui","version":"0.0.0+58f405d5"});
+  require("spaircorp-ui/app")["default"].create({"name":"spaircorp-ui","version":"0.0.0+59044944"});
 }
 
 /* jshint ignore:end */
