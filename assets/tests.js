@@ -105,7 +105,7 @@ define('spaircorp-ui/tests/components/jsplumb-toolkit.lint-test', ['exports'], f
   QUnit.module('ESLint - components/jsplumb-toolkit.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(false, 'components/jsplumb-toolkit.js should pass ESLint.\n13:7  - \'EMPTY_FUNCTION\' is assigned a value but never used. (no-unused-vars)\n26:5  - \'jsPlumbToolkit\' is not defined. (no-undef)\n36:21  - \'jsPlumbToolkit\' is not defined. (no-undef)\n41:11  - \'bootbox\' is not defined. (no-undef)\n51:29  - \'jsPlumbToolkitUtil\' is not defined. (no-undef)\n61:39  - \'edgeData\' is defined but never used. (no-unused-vars)\n63:13  - \'bootbox\' is not defined. (no-undef)\n68:36  - \'edgeType\' is defined but never used. (no-unused-vars)\n72:46  - \'edge\' is defined but never used. (no-unused-vars)\n75:38  - \'edge\' is defined but never used. (no-unused-vars)\n78:43  - \'edge\' is defined but never used. (no-unused-vars)\n90:9  - \'bootbox\' is not defined. (no-undef)\n197:23  - \'e\' is defined but never used. (no-unused-vars)\n206:13  - Unexpected console statement. (no-console)\n230:9  - \'jsPlumb\' is not defined. (no-undef)\n231:9  - \'jsPlumb\' is not defined. (no-undef)\n235:7  - \'jsPlumb\' is not defined. (no-undef)\n240:7  - \'jsPlumb\' is not defined. (no-undef)\n246:11  - \'jsPlumbToolkit\' is not defined. (no-undef)\n250:7  - \'jsPlumb\' is not defined. (no-undef)\n253:9  - \'bootbox\' is not defined. (no-undef)\n265:7  - \'jsPlumb\' is not defined. (no-undef)\n276:9  - \'bootbox\' is not defined. (no-undef)\n315:25  - \'type\' is defined but never used. (no-unused-vars)');
+    assert.ok(false, 'components/jsplumb-toolkit.js should pass ESLint.\n13:7  - \'EMPTY_FUNCTION\' is assigned a value but never used. (no-unused-vars)\n26:5  - \'jsPlumbToolkit\' is not defined. (no-undef)\n36:23  - \'jsPlumbToolkit\' is not defined. (no-undef)\n41:11  - \'bootbox\' is not defined. (no-undef)\n51:29  - \'jsPlumbToolkitUtil\' is not defined. (no-undef)\n61:39  - \'edgeData\' is defined but never used. (no-unused-vars)\n63:13  - \'bootbox\' is not defined. (no-undef)\n68:36  - \'edgeType\' is defined but never used. (no-unused-vars)\n82:46  - \'edge\' is defined but never used. (no-unused-vars)\n85:38  - \'edge\' is defined but never used. (no-unused-vars)\n88:43  - \'edge\' is defined but never used. (no-unused-vars)\n95:25  - \'msg\' is defined but never used. (no-unused-vars)\n99:27  - \'response\' is defined but never used. (no-unused-vars)\n111:9  - \'bootbox\' is not defined. (no-undef)\n187:23  - Unexpected \'debugger\' statement. (no-debugger)\n219:23  - \'e\' is defined but never used. (no-unused-vars)\n230:13  - Unexpected console statement. (no-console)\n246:7  - Unexpected \'debugger\' statement. (no-debugger)\n256:9  - \'jsPlumb\' is not defined. (no-undef)\n257:9  - \'jsPlumb\' is not defined. (no-undef)\n261:7  - \'jsPlumb\' is not defined. (no-undef)\n266:7  - \'jsPlumb\' is not defined. (no-undef)\n272:11  - \'jsPlumbToolkit\' is not defined. (no-undef)\n276:7  - \'jsPlumb\' is not defined. (no-undef)\n279:9  - \'bootbox\' is not defined. (no-undef)\n291:7  - \'jsPlumb\' is not defined. (no-undef)\n302:9  - \'bootbox\' is not defined. (no-undef)\n341:25  - \'type\' is defined but never used. (no-unused-vars)');
   });
 });
 define('spaircorp-ui/tests/controllers/admin/scripts/edit.lint-test', ['exports'], function (exports) {
@@ -239,105 +239,6 @@ define('spaircorp-ui/tests/helpers/start-app.lint-test', ['exports'], function (
     assert.ok(true, 'helpers/start-app.js should pass ESLint.\n');
   });
 });
-define('spaircorp-ui/tests/models/checkbox-control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/checkbox-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'models/checkbox-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/models/connection.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/connection.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'models/connection.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/models/control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'models/control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/models/currency-control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/currency-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'models/currency-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/models/date-control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/date-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'models/date-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/models/decision-step.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/decision-step.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'models/decision-step.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/models/finish-step.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/finish-step.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'models/finish-step.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/models/list-control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/list-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'models/list-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/models/number-control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/number-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'models/number-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/models/process-step.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/process-step.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'models/process-step.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/models/radio-control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/radio-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'models/radio-control.js should pass ESLint.\n');
-  });
-});
 define('spaircorp-ui/tests/models/script.lint-test', ['exports'], function (exports) {
   'use strict';
 
@@ -345,42 +246,6 @@ define('spaircorp-ui/tests/models/script.lint-test', ['exports'], function (expo
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
     assert.ok(true, 'models/script.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/models/start-step.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/start-step.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'models/start-step.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/models/step.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/step.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(false, 'models/step.js should pass ESLint.\n13:15  - \'Ember\' is not defined. (no-undef)\n17:13  - \'Ember\' is not defined. (no-undef)');
-  });
-});
-define('spaircorp-ui/tests/models/textarea-control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/textarea-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'models/textarea-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/models/textbox-control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - models/textbox-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'models/textbox-control.js should pass ESLint.\n');
   });
 });
 define('spaircorp-ui/tests/resolver.lint-test', ['exports'], function (exports) {
@@ -443,7 +308,7 @@ define('spaircorp-ui/tests/routes/admin/scripts/edit.lint-test', ['exports'], fu
   QUnit.module('ESLint - routes/admin/scripts/edit.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(false, 'routes/admin/scripts/edit.js should pass ESLint.\n14:7  - \'bootbox\' is not defined. (no-undef)\n25:16  - \'obj\' is defined but never used. (no-unused-vars)\n27:7  - Unexpected \'debugger\' statement. (no-debugger)\n56:9  - \'bootbox\' is not defined. (no-undef)\n99:7  - Unexpected \'debugger\' statement. (no-debugger)\n101:35  - \'scope\' is assigned a value but never used. (no-unused-vars)\n101:42  - \'connection\' is assigned a value but never used. (no-unused-vars)\n101:54  - \'dropEndpoint\' is assigned a value but never used. (no-unused-vars)\n118:13  - \'promise\' is assigned a value but never used. (no-unused-vars)\n156:27  - \'e\' is defined but never used. (no-unused-vars)\n161:9  - \'bootbox\' is not defined. (no-undef)');
+    assert.ok(false, 'routes/admin/scripts/edit.js should pass ESLint.\n14:7  - \'bootbox\' is not defined. (no-undef)\n62:9  - \'bootbox\' is not defined. (no-undef)\n105:7  - Unexpected \'debugger\' statement. (no-debugger)\n107:35  - \'scope\' is assigned a value but never used. (no-unused-vars)\n107:42  - \'connection\' is assigned a value but never used. (no-unused-vars)\n107:54  - \'dropEndpoint\' is assigned a value but never used. (no-unused-vars)\n124:13  - \'promise\' is assigned a value but never used. (no-unused-vars)\n162:27  - \'e\' is defined but never used. (no-unused-vars)\n167:9  - \'bootbox\' is not defined. (no-undef)');
   });
 });
 define('spaircorp-ui/tests/routes/admin/scripts/edit/process-step/edit.lint-test', ['exports'], function (exports) {
@@ -511,6 +376,15 @@ define('spaircorp-ui/tests/test-helper.lint-test', ['exports'], function (export
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
     assert.ok(true, 'test-helper.js should pass ESLint.\n');
+  });
+});
+define('spaircorp-ui/tests/transforms/raw.lint-test', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('ESLint - transforms/raw.js');
+  QUnit.test('should pass ESLint', function (assert) {
+    assert.expect(1);
+    assert.ok(true, 'transforms/raw.js should pass ESLint.\n');
   });
 });
 define('spaircorp-ui/tests/transitions.lint-test', ['exports'], function (exports) {
@@ -850,6 +724,28 @@ define('spaircorp-ui/tests/unit/models/textbox-control-test.lint-test', ['export
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
     assert.ok(true, 'unit/models/textbox-control-test.js should pass ESLint.\n');
+  });
+});
+define('spaircorp-ui/tests/unit/transforms/raw-test', ['exports', 'ember-qunit'], function (exports, _emberQunit) {
+
+  (0, _emberQunit.moduleFor)('transform:raw', 'Unit | Transform | raw', {
+    // Specify the other units that are required for this test.
+    // needs: ['serializer:foo']
+  });
+
+  // Replace this with your real tests.
+  (0, _emberQunit.test)('it exists', function (assert) {
+    var transform = this.subject();
+    assert.ok(transform);
+  });
+});
+define('spaircorp-ui/tests/unit/transforms/raw-test.lint-test', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('ESLint - unit/transforms/raw-test.js');
+  QUnit.test('should pass ESLint', function (assert) {
+    assert.expect(1);
+    assert.ok(true, 'unit/transforms/raw-test.js should pass ESLint.\n');
   });
 });
 /* jshint ignore:start */

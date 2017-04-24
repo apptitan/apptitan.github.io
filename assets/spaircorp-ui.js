@@ -214,8 +214,18 @@ define('spaircorp-ui/components/jsplumb-toolkit', ['exports', 'ember'], function
             return true;
           },
           beforeStartConnect: function beforeStartConnect(source, edgeType) {
-            // limit edges from start node to 1. if any other type of node, return
-            return source.data.type === "start" && source.getEdges().length > 0 ? false : { label: "" };
+
+            // Rule: start only allowed 1 exit
+            if (source.data.type === "start" && source.getEdges().length > 0) {
+              return false;
+            }
+
+            // Rule: processes only allowed multiple entry and 1 exit
+            if (source.data.type === "process" && source.getEdges().length > 0) {
+              return false;
+            }
+
+            return { label: "" };
           },
           beforeMoveConnection: function beforeMoveConnection(source, target, edge) {
             return true;
@@ -225,6 +235,17 @@ define('spaircorp-ui/components/jsplumb-toolkit', ['exports', 'ember'], function
           },
           beforeStartDetach: function beforeStartDetach(source, target, edge) {
             return true;
+          },
+
+          // Saving
+          autoSave: true,
+          saveUrl: "http://localhost:4200/scripts/2/diagram", // FIXME ****************** pass in as parameter
+          onAutoSaveError: function onAutoSaveError(msg) {
+            _ember['default'].debug('Saving script has failed!');
+            alert('Save Failed!');
+          },
+          onAutoSaveSuccess: function onAutoSaveSuccess(response) {
+            _ember['default'].debug('Saved Successfully!');
           }
         });
 
@@ -305,6 +326,7 @@ define('spaircorp-ui/components/jsplumb-toolkit', ['exports', 'ember'], function
                   label: "${label}",
                   events: {
                     click: function click(params) {
+                      debugger;
                       _editLabel(params.edge);
                     }
                   }
@@ -339,7 +361,10 @@ define('spaircorp-ui/components/jsplumb-toolkit', ['exports', 'ember'], function
             },
             edgeAdded: function edgeAdded(params) {
               if (params.addedByMouse) {
-                _editLabel(params.edge, true);
+                if (params.source.data.type !== 'start') {
+                  // FIXME: This is business logic move to route
+                  _editLabel(params.edge, true);
+                }
               }
             },
             nodeDropped: function nodeDropped(info) {
@@ -359,6 +384,7 @@ define('spaircorp-ui/components/jsplumb-toolkit', ['exports', 'ember'], function
         });
 
         // Load the data.
+        debugger;
         toolkit.load({
           data: _this.attrs.data || {}
         });
@@ -815,210 +841,7 @@ define('spaircorp-ui/controllers/admin/scripts/edit', ['exports', 'ember'], func
 
     hasStartNode: _ember['default'].computed('model.steps.@each', function () {
       return this.get('model.steps').filterBy('stereotype', 'start-step');
-    }),
-
-    data: {
-      "nodes": [{
-        "id": "start",
-        "type": "start",
-        "text": "Start",
-        "left": 50,
-        "top": 50,
-        "w": 100,
-        "h": 70
-      }, {
-        "id": "question1",
-        "type": "decision",
-        "text": "Do Something?",
-        "left": 290,
-        "top": 79,
-        "w": 150,
-        "h": 150
-      }, {
-        "id": "decide",
-        "type": "process",
-        "text": "Make Decision",
-        "left": 660,
-        "top": 187,
-        "w": 120,
-        "h": 120
-      }, {
-        "id": "something",
-        "type": "finish",
-        "text": "Do Something",
-        "left": 827,
-        "top": 414,
-        "w": 120,
-        "h": 50
-      }, {
-        "id": "question2",
-        "type": "decision",
-        "text": "Do Nothing?",
-        "left": 74,
-        "top": 330,
-        "w": 150,
-        "h": 150
-      }, {
-        "id": "nothing",
-        "type": "finish",
-        "text": "Do Nothing",
-        "left": 433,
-        "top": 558,
-        "w": 100,
-        "h": 50
-      }],
-      "edges": [{
-        "id": 1,
-        "source": "start",
-        "target": "question1"
-      }, {
-        "id": 2,
-        "source": "question1",
-        "target": "decide",
-        "data": { "label": "yes", "type": "connection" }
-      }, {
-        "id": 3,
-        "source": "question1",
-        "target": "question2",
-        "data": { "label": "no", "type": "connection" }
-      }, {
-        "id": 4,
-        "source": "question2",
-        "target": "decide",
-        "data": { "label": "no", "type": "connection" }
-      }, {
-        "id": 5,
-        "source": "question2",
-        "target": "nothing",
-        "data": { "label": "yes", "type": "connection" }
-      }, {
-        "id": 6,
-        "source": "decide",
-        "target": "nothing",
-        "data": { "label": "Can't Decide", "type": "connection" }
-      }, {
-        "id": 7,
-        "source": "decide",
-        "target": "something",
-        "data": { "label": "Decision Made", "type": "connection" }
-      }]
-    }
-
-    // endpoints: [{
-    //   isSource: true,
-    //   maxConnections: -1,
-    //   // newConnection:true,
-    //   uniqueEndpoint: false,
-    //   endpoint: ['Dot', {
-    //     radius: 10,
-    //     hoverClass: 'jsplumb-endpoint-hover',
-    //     cssClass: 'jsplumb-anchor-source',
-    //   }],
-    //   anchor: 'Continuous',
-    //   connector: ["Flowchart"],
-    //   type: 'default',
-    //   connectorStyle: {
-    //     strokeStyle: 'rgb(68, 85, 102)',
-    //     lineWidth: 1,
-    //     outlineColor: "transparent",
-    //     outlineWidth: 4
-    //   },
-    //   connectorOverlays: [
-    //     ["Arrow", {
-    //       location: 1,
-    //       visible: true,
-    //       id: "ARROW",
-    //       direction: 1
-    //     }]
-    //   ],
-    //   paintStyle:{ stroke:'rgb(68, 85, 102)', strokeWidth:2  },
-    // }, {
-    //   isTarget: true,
-    //   paintStyle:{ fill:"transparent", outlineStroke:'rgb(68, 85, 102)', outlineWidth:1 },
-    //   connectorPaintStyle:{ stroke:"blue", strokeWidth:10 },
-    //   maxConnections: -1,
-    //   // newConnection:true,
-    //   uniqueEndpoint: false,
-    //   endpoint: ['Dot', {
-    //     radius: 10,
-    //     hoverClass: 'jsplumb-endpoint-hover',
-    //     cssClass: 'jsplumb-anchor-source',
-    //   }],
-    //   anchor: 'Continuous',
-    //   //connector: ["Flowchart"],
-    //   type: 'default2',
-    //   connectorStyle: {
-    //     strokeStyle: 'rgb(10, 10, 10)',
-    //     lineWidth: 1,
-    //     outlineColor: "transparent",
-    //     outlineWidth: 4
-    //   },
-    // }],
-
-    /*
-    connectionTypes: {
-      "start-step": {
-        paintStyle:{ stroke:'rgb(68, 85, 102)', strokeWidth:2  },
-        hoverPaintStyle:{ stroke:"green", strokeWidth:2 },
-        // cssClass:"connector-normal",
-        endpoint: ['Rectangle', {
-          radius: 2,
-          hoverClass: 'jsplumb-endpoint-hover',
-          cssClass: 'jsplumb-anchor-source',
-        }],
-        connector:[ "Flowchart"],
-        // connectorStyle: {
-        //   strokeStyle: 'rgb(68, 85, 102)',
-        //   lineWidth: 1,
-        //   outlineColor: "transparent",
-        //   outlineWidth: 4
-        // },
-        overlays: [
-          ["Arrow", {
-            location: 1,
-            visible: true,
-            id: "ARROW",
-            direction: 1
-          }]
-        ]
-      },
-      // "target": {
-      //   paintStyle:{ stroke:"blue", strokeWidth:5  },
-      //   hoverPaintStyle:{ stroke:"red", strokeWidth:7 },
-      //   cssClass:"connector-normal",
-      //   endpoint: ['Dot', {
-      //     radius: 2,
-      //     hoverClass: 'jsplumb-endpoint-hover',
-      //     cssClass: 'jsplumb-anchor-source',
-      //   }],
-      //   connector: ["Flowchart"],
-      //   connectorStyle: {
-      //     strokeStyle: 'rgb(68, 85, 102)',
-      //     lineWidth: 1,
-      //     outlineColor: "transparent",
-      //     outlineWidth: 4
-      //   },
-      //   connectorOverlays: [
-      //     ["Arrow", {
-      //       location: 1,
-      //       visible: true,
-      //       id: "ARROW",
-      //       direction: 1
-      //     }]
-      //   ]
-      // },
-      "basic": {
-        paintStyle:{ stroke:"yellow", strokeWidth:2  },
-        hoverPaintStyle:{ stroke:"brown", strokeWidth:2 },
-        cssClass:"jsplumb-anchor-source"
-      },
-      // "selected":{
-      //   paintStyle:{ stroke:"red", strokeWidth:5 },
-      //   hoverPaintStyle:{ strokeWidth: 7 },
-      //   cssClass:"connector-selected"
-      // }
-    }
-    */
+    })
 
   });
 });
@@ -2356,118 +2179,15 @@ define('spaircorp-ui/mirage/config', ['exports'], function (exports) {
     this.post('/scripts');
     this.put('/scripts');
     this.del('/scripts/:id');
-
-    this.get('/start-steps');
-    this.get('/start-steps/:id');
-    this.post('/start-steps');
-    this.put('/start-steps');
-    this.del('/start-steps/:id');
-
-    this.get('/finish-steps');
-    this.get('/finish-steps/:id');
-    this.post('/finish-steps');
-    this.put('/finish-steps');
-    this.del('/finish-steps/:id');
-
-    this.get('/process-steps');
-    this.get('/process-steps/:id');
-    this.post('/process-steps');
-    this.put('/process-steps');
-    this.del('/process-steps/:id');
-
-    this.get('/decision-steps');
-    this.get('/decision-steps/:id');
-    this.post('/decision-steps');
-    this.put('/decision-steps');
-    this.del('/decision-steps/:id');
-
-    // ******************** CONTROLS ********************
-    this.get('/checkbox-controls');
-    this.get('/checkbox-controls/:id');
-    this.post('/checkbox-controls');
-    this.put('/checkbox-controls');
-    this.del('/checkbox-controls/:id');
-
-    this.get('/currency-controls');
-    this.get('/currency-controls/:id');
-    this.post('/currency-controls');
-    this.put('/currency-controls');
-    this.del('/currency-controls/:id');
-
-    this.get('/date-controls');
-    this.get('/date-controls/:id');
-    this.post('/date-controls');
-    this.put('/date-controls');
-    this.del('/date-controls/:id');
-
-    this.get('/list-controls');
-    this.get('/list-controls/:id');
-    this.post('/list-controls');
-    this.put('/list-controls');
-    this.del('/list-controls/:id');
-
-    this.get('/number-controls');
-    this.get('/number-controls/:id');
-    this.post('/number-controls');
-    this.put('/number-controls');
-    this.del('/number-controls/:id');
-
-    this.get('/radio-controls');
-    this.get('/radio-controls/:id');
-    this.post('/radio-controls');
-    this.put('/radio-controls');
-    this.del('/radio-controls/:id');
-
-    this.get('/textarea-controls');
-    this.get('/textarea-controls/:id');
-    this.post('/textarea-controls');
-    this.put('/textarea-controls');
-    this.del('/textarea-controls/:id');
-
-    this.get('/textbox-controls');
-    this.get('/textbox-controls/:id');
-    this.post('/textbox-controls');
-    this.put('/textbox-controls');
-    this.del('/textbox-controls/:id');
-
-    // ******************** CONNECTIONS ********************
-    this.get('/connections');
-    this.get('/connections/:id');
-    this.post('/connections');
-    this.put('/connections');
-    this.del('/connections/:id');
+    this.post('/scripts/:id/diagram', function (schema, request) {
+      var script = script = schema.scripts.find(request.params.id);
+      script.diagram = JSON.parse(request.requestBody);
+      script.save();
+      return {
+        status: 'success'
+      };
+    });
   };
-});
-define('spaircorp-ui/mirage/factories/checkbox-control', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Factory.extend({});
-});
-define('spaircorp-ui/mirage/factories/connection', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Factory.extend({});
-});
-define('spaircorp-ui/mirage/factories/date-control', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Factory.extend({});
-});
-define('spaircorp-ui/mirage/factories/decision-step', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Factory.extend({});
-});
-define('spaircorp-ui/mirage/factories/finish-step', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Factory.extend({});
-});
-define('spaircorp-ui/mirage/factories/list-control', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Factory.extend({});
-});
-define('spaircorp-ui/mirage/factories/number-control', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Factory.extend({});
-});
-define('spaircorp-ui/mirage/factories/process-step', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Factory.extend({
-    name: function name(i) {
-      return 'process#' + i;
-    }
-  });
-});
-define('spaircorp-ui/mirage/factories/radio-control', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Factory.extend({});
 });
 define('spaircorp-ui/mirage/factories/script', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
   exports['default'] = _emberCliMirage.Factory.extend({
@@ -2478,87 +2198,15 @@ define('spaircorp-ui/mirage/factories/script', ['exports', 'ember-cli-mirage'], 
     status: 'Online',
     url: function url(i) {
       return 'http://test.com?script=' + i;
-    }
+    },
+    diagram: {}
   });
-});
-define('spaircorp-ui/mirage/factories/start-step', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Factory.extend({});
-});
-define('spaircorp-ui/mirage/factories/textarea-control', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Factory.extend({});
-});
-define('spaircorp-ui/mirage/factories/textbox-control', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Factory.extend({});
-});
-define('spaircorp-ui/mirage/models/checkbox-control', ['exports', 'spaircorp-ui/mirage/models/control'], function (exports, _spaircorpUiMirageModelsControl) {
-  exports['default'] = _spaircorpUiMirageModelsControl['default'].extend({});
-});
-define('spaircorp-ui/mirage/models/connection', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Model.extend({
-    fromStep: (0, _emberCliMirage.belongsTo)('start-step'),
-    toStep: (0, _emberCliMirage.belongsTo)('process-step')
-    // fromStep: belongsTo('step', { polymorphic: true }),
-    // toStep: belongsTo('step', { polymorphic: true })
-  });
-});
-define('spaircorp-ui/mirage/models/control', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Model.extend({
-    processStep: (0, _emberCliMirage.belongsTo)()
-  });
-});
-define('spaircorp-ui/mirage/models/date-control', ['exports', 'spaircorp-ui/mirage/models/control'], function (exports, _spaircorpUiMirageModelsControl) {
-  exports['default'] = _spaircorpUiMirageModelsControl['default'].extend({});
-});
-define('spaircorp-ui/mirage/models/decision-step', ['exports', 'spaircorp-ui/mirage/models/step'], function (exports, _spaircorpUiMirageModelsStep) {
-  exports['default'] = _spaircorpUiMirageModelsStep['default'].extend({});
-});
-define('spaircorp-ui/mirage/models/finish-step', ['exports', 'spaircorp-ui/mirage/models/step'], function (exports, _spaircorpUiMirageModelsStep) {
-  exports['default'] = _spaircorpUiMirageModelsStep['default'].extend({});
-});
-define('spaircorp-ui/mirage/models/list-control', ['exports', 'spaircorp-ui/mirage/models/control'], function (exports, _spaircorpUiMirageModelsControl) {
-  exports['default'] = _spaircorpUiMirageModelsControl['default'].extend({});
-});
-define('spaircorp-ui/mirage/models/number-control', ['exports', 'spaircorp-ui/mirage/models/control'], function (exports, _spaircorpUiMirageModelsControl) {
-  exports['default'] = _spaircorpUiMirageModelsControl['default'].extend({});
-});
-define('spaircorp-ui/mirage/models/process-step', ['exports', 'ember-cli-mirage', 'spaircorp-ui/mirage/models/step'], function (exports, _emberCliMirage, _spaircorpUiMirageModelsStep) {
-  exports['default'] = _spaircorpUiMirageModelsStep['default'].extend({
-    controls: (0, _emberCliMirage.hasMany)(),
-
-    branchListControls: (0, _emberCliMirage.hasMany)('list-control'),
-    branchCheckboxControls: (0, _emberCliMirage.hasMany)('checkbox-control'),
-    branchRadioControls: (0, _emberCliMirage.hasMany)('radio-control')
-
-  });
-});
-define('spaircorp-ui/mirage/models/radio-control', ['exports', 'spaircorp-ui/mirage/models/control'], function (exports, _spaircorpUiMirageModelsControl) {
-  exports['default'] = _spaircorpUiMirageModelsControl['default'].extend({});
 });
 define('spaircorp-ui/mirage/models/script', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Model.extend({
-    steps: (0, _emberCliMirage.hasMany)('step', { polymorphic: true }),
-    connections: (0, _emberCliMirage.hasMany)()
-  });
+  exports['default'] = _emberCliMirage.Model.extend({});
 });
-define('spaircorp-ui/mirage/models/start-step', ['exports', 'spaircorp-ui/mirage/models/step'], function (exports, _spaircorpUiMirageModelsStep) {
-  exports['default'] = _spaircorpUiMirageModelsStep['default'].extend({});
-});
-define('spaircorp-ui/mirage/models/step', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.Model.extend({
-    script: (0, _emberCliMirage.belongsTo)(),
-
-    fromConnections: (0, _emberCliMirage.hasMany)('connection', { inverse: 'fromStep' }),
-    toConnections: (0, _emberCliMirage.hasMany)('connection', { inverse: 'toStep' })
-  });
-});
-define('spaircorp-ui/mirage/models/textarea-control', ['exports', 'spaircorp-ui/mirage/models/control'], function (exports, _spaircorpUiMirageModelsControl) {
-  exports['default'] = _spaircorpUiMirageModelsControl['default'].extend({});
-});
-define('spaircorp-ui/mirage/models/textbox-control', ['exports', 'spaircorp-ui/mirage/models/control'], function (exports, _spaircorpUiMirageModelsControl) {
-  exports['default'] = _spaircorpUiMirageModelsControl['default'].extend({});
-});
-define('spaircorp-ui/mirage/scenarios/default', ['exports'], function (exports) {
-  exports['default'] = function (server) {
+define("spaircorp-ui/mirage/scenarios/default", ["exports"], function (exports) {
+  exports["default"] = function (server) {
 
     /*
       Seed your development database using your factories.
@@ -2566,77 +2214,112 @@ define('spaircorp-ui/mirage/scenarios/default', ['exports'], function (exports) 
        Make sure to define a factory for each model you want to create.
     */
 
-    var startStep1 = server.create('start-step', {
-      name: 'Start',
-      left: 300,
-      top: 100,
-      width: 100,
-      height: 100
-    });
-
-    var processStep1 = server.create('process-step', {
-      name: 'Enter Data',
-      left: 300,
-      top: 300,
-      width: 100,
-      height: 100
-    });
-
-    var finishStep1 = server.create('finish-step', {
-      name: 'Finish',
-      left: 300,
-      top: 500,
-      width: 100,
-      height: 100
-    });
-
-    var connection1 = server.create('connection', {
-      fromStep: startStep1,
-      toStep: processStep1
-    });
-
-    var connection2 = server.create('connection', {
-      fromStep: processStep1,
-      toStep: finishStep1
-    });
-
     var script1 = server.create('script', {
-      steps: [startStep1, processStep1, finishStep1],
-      connections: [connection1]
+      diagram: {
+        "nodes": [{
+          "id": "start",
+          "type": "start",
+          "text": "Start",
+          "left": 50,
+          "top": 50,
+          "w": 100,
+          "h": 70
+        }],
+        "edges": []
+      }
     });
-
-    var script2 = server.create('script');
-    var script3 = server.create('script');
+    var script2 = server.create('script', {
+      diagram: {
+        "nodes": [{
+          "id": "start",
+          "type": "start",
+          "text": "Start",
+          "left": 50,
+          "top": 50,
+          "w": 100,
+          "h": 70
+        }, {
+          "id": "question1",
+          "type": "decision",
+          "text": "Do Something?",
+          "left": 290,
+          "top": 79,
+          "w": 150,
+          "h": 150
+        }, {
+          "id": "decide",
+          "type": "process",
+          "text": "Make Decision",
+          "left": 660,
+          "top": 187,
+          "w": 120,
+          "h": 120
+        }, {
+          "id": "something",
+          "type": "finish",
+          "text": "Do Something",
+          "left": 827,
+          "top": 414,
+          "w": 120,
+          "h": 50
+        }, {
+          "id": "question2",
+          "type": "decision",
+          "text": "Do Nothing?",
+          "left": 74,
+          "top": 330,
+          "w": 150,
+          "h": 150
+        }, {
+          "id": "nothing",
+          "type": "finish",
+          "text": "Do Nothing",
+          "left": 433,
+          "top": 558,
+          "w": 100,
+          "h": 50
+        }],
+        "edges": [{
+          "id": 1,
+          "source": "start",
+          "target": "decide"
+        }, {
+          "id": 2,
+          "source": "question1",
+          "target": "decide",
+          "data": { "label": "yes", "type": "connection" }
+        }, {
+          "id": 3,
+          "source": "question1",
+          "target": "question2",
+          "data": { "label": "no", "type": "connection" }
+        }, {
+          "id": 4,
+          "source": "question2",
+          "target": "decide",
+          "data": { "label": "no", "type": "connection" }
+        }, {
+          "id": 5,
+          "source": "question2",
+          "target": "nothing",
+          "data": { "label": "yes", "type": "connection" }
+        }, {
+          "id": 6,
+          "source": "decide",
+          "target": "nothing",
+          "data": { "label": "Can't Decide", "type": "connection" }
+        }, {
+          "id": 7,
+          "source": "decide",
+          "target": "something",
+          "data": { "label": "Decision Made", "type": "connection" }
+        }]
+      }
+    });
   };
 });
-define('spaircorp-ui/mirage/serializers/application', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.JSONAPISerializer.extend({});
-});
 define('spaircorp-ui/mirage/serializers/script', ['exports', 'ember-cli-mirage'], function (exports, _emberCliMirage) {
-  exports['default'] = _emberCliMirage.JSONAPISerializer.extend({
-    include: ['steps', 'connections']
-  });
-});
-define('spaircorp-ui/models/checkbox-control', ['exports', 'ember-data', 'spaircorp-ui/models/control'], function (exports, _emberData, _spaircorpUiModelsControl) {
-  exports['default'] = _spaircorpUiModelsControl['default'].extend({
-    title: 'Checkbox',
-    controlType: 'checkbox',
-    branch: _emberData['default'].belongsTo('process-step')
-  });
-});
-define('spaircorp-ui/models/connection', ['exports', 'ember-data'], function (exports, _emberData) {
-  exports['default'] = _emberData['default'].Model.extend({
-    fromStep: _emberData['default'].belongsTo('step', { polymorphic: true }),
-    toStep: _emberData['default'].belongsTo('step', { polymorphic: true })
-  });
-});
-define('spaircorp-ui/models/control', ['exports', 'ember-data'], function (exports, _emberData) {
-  exports['default'] = _emberData['default'].Model.extend({
-    label: _emberData['default'].attr('string'),
-    index: _emberData['default'].attr('number'),
-
-    processStep: _emberData['default'].belongsTo()
-  });
+  exports['default'] = _emberCliMirage.JSONAPISerializer.extend({});
 });
 define('spaircorp-ui/models/coordinator', ['exports', 'ember', 'spaircorp-ui/models/obj-hash'], function (exports, _ember, _spaircorpUiModelsObjHash) {
   exports['default'] = _ember['default'].Object.extend(_ember['default'].Evented, {
@@ -2667,90 +2350,6 @@ define('spaircorp-ui/models/coordinator', ['exports', 'ember', 'spaircorp-ui/mod
     }
   });
 });
-define('spaircorp-ui/models/currency-control', ['exports', 'spaircorp-ui/models/control'], function (exports, _spaircorpUiModelsControl) {
-  exports['default'] = _spaircorpUiModelsControl['default'].extend({
-    title: 'Currency',
-    controlType: 'currency'
-  });
-});
-// import DS from 'ember-data';
-define('spaircorp-ui/models/date-control', ['exports', 'spaircorp-ui/models/control'], function (exports, _spaircorpUiModelsControl) {
-  exports['default'] = _spaircorpUiModelsControl['default'].extend({
-    title: 'Date',
-    controlType: 'date'
-  });
-});
-// import DS from 'ember-data';
-define('spaircorp-ui/models/decision-step', ['exports', 'spaircorp-ui/models/step'], function (exports, _spaircorpUiModelsStep) {
-  exports['default'] = _spaircorpUiModelsStep['default'].extend({
-    hasCustomTitle: true,
-
-    jsplumbEndpoints: [{
-      isTarget: true,
-      maxConnections: -1,
-      endpoint: ['Dot', {
-        radius: 4,
-        hoverClass: 'jsplumb-endpoint-hover',
-        cssClass: 'jsplumb-anchor-source'
-      }],
-      anchor: 'Continuous'
-    }, {
-      isSource: true,
-      paintStyle: { fill: 'green' },
-      connector: ["Straight"],
-      endpoint: ['Dot', {
-        //radius: 2,
-        hoverClass: 'jsplumb-endpoint-hover',
-        cssClass: 'jsplumb-anchor-source'
-      }],
-      anchor: 'Continuous'
-    }, {
-      isSource: true,
-      paintStyle: { fill: 'red' },
-      connector: ["Straight"],
-      endpoint: ['Dot', {
-        //radius: 2,
-        hoverClass: 'jsplumb-endpoint-hover',
-        cssClass: 'jsplumb-anchor-source'
-      }],
-      anchor: 'Continuous'
-    }]
-
-  });
-});
-// import DS from 'ember-data';
-define('spaircorp-ui/models/finish-step', ['exports', 'spaircorp-ui/models/step'], function (exports, _spaircorpUiModelsStep) {
-  exports['default'] = _spaircorpUiModelsStep['default'].extend({
-    title: 'Finish',
-    jsplumbEndpoints: [{
-      isTarget: true,
-      connector: ["Straight"],
-      maxConnections: -1,
-      endpoint: ['Dot', {
-        radius: 4,
-        hoverClass: 'jsplumb-endpoint-hover',
-        cssClass: 'jsplumb-anchor-source'
-      }],
-      anchor: 'Continuous'
-    }]
-
-  });
-});
-// import DS from 'ember-data';
-define('spaircorp-ui/models/list-control', ['exports', 'ember-data', 'spaircorp-ui/models/control'], function (exports, _emberData, _spaircorpUiModelsControl) {
-  exports['default'] = _spaircorpUiModelsControl['default'].extend({
-    title: 'List',
-    controlType: 'list',
-    branch: _emberData['default'].belongsTo('process-step')
-  });
-});
-define('spaircorp-ui/models/number-control', ['exports', 'spaircorp-ui/models/control'], function (exports, _spaircorpUiModelsControl) {
-  exports['default'] = _spaircorpUiModelsControl['default'].extend({
-    title: 'Number',
-    controlType: 'number'
-  });
-});
-// import DS from 'ember-data';
 define('spaircorp-ui/models/obj-hash', ['exports', 'ember'], function (exports, _ember) {
   exports['default'] = _ember['default'].Object.extend({
     content: {},
@@ -2789,106 +2388,15 @@ define('spaircorp-ui/models/obj-hash', ['exports', 'ember'], function (exports, 
 
   });
 });
-define('spaircorp-ui/models/process-step', ['exports', 'ember-data', 'spaircorp-ui/models/step'], function (exports, _emberData, _spaircorpUiModelsStep) {
-  exports['default'] = _spaircorpUiModelsStep['default'].extend({
-
-    name: _emberData['default'].attr('string'),
-    controls: _emberData['default'].hasMany('control', { polymorphic: true }),
-
-    branchListControls: _emberData['default'].hasMany('list-control', { inverse: '' }),
-    branchCheckboxControls: _emberData['default'].hasMany('checkbox-control'),
-    branchRadioControls: _emberData['default'].hasMany('radio-control'),
-
-    hasCustomTitle: true,
-
-    jsplumbEndpoints: [{
-      isSource: true,
-      maxConnections: -1,
-      connector: ["Straight"],
-      endpoint: ['Dot', {
-        //radius: 2,
-        hoverClass: 'jsplumb-endpoint-hover',
-        cssClass: 'jsplumb-anchor-source'
-      }],
-      anchor: 'Continuous'
-    }, {
-      isTarget: true,
-      connector: ["Straight"],
-      maxConnections: -1,
-      endpoint: ['Dot', {
-        radius: 4,
-        hoverClass: 'jsplumb-endpoint-hover',
-        cssClass: 'jsplumb-anchor-source'
-      }],
-      anchor: 'Continuous'
-    }]
-
-  });
-});
-define('spaircorp-ui/models/radio-control', ['exports', 'ember-data', 'spaircorp-ui/models/control'], function (exports, _emberData, _spaircorpUiModelsControl) {
-  exports['default'] = _spaircorpUiModelsControl['default'].extend({
-    title: 'Radio',
-    controlType: 'radio',
-    branch: _emberData['default'].belongsTo('process-step')
-  });
-});
 define('spaircorp-ui/models/script', ['exports', 'ember-data'], function (exports, _emberData) {
   exports['default'] = _emberData['default'].Model.extend({
     name: _emberData['default'].attr('string'),
     date: _emberData['default'].attr('date'),
     status: _emberData['default'].attr('string'),
     url: _emberData['default'].attr('string'),
-
-    steps: _emberData['default'].hasMany('step', { polymorphic: true }),
-    connections: _emberData['default'].hasMany()
+    diagram: _emberData['default'].attr('raw')
   });
 });
-define('spaircorp-ui/models/start-step', ['exports', 'spaircorp-ui/models/step'], function (exports, _spaircorpUiModelsStep) {
-  exports['default'] = _spaircorpUiModelsStep['default'].extend({
-    title: 'Start',
-    jsplumbEndpoints: [{
-      isSource: true,
-      connector: ["Straight"]
-    }]
-
-  });
-});
-// import DS from 'ember-data';
-define('spaircorp-ui/models/step', ['exports', 'ember-data'], function (exports, _emberData) {
-  exports['default'] = _emberData['default'].Model.extend({
-    script: _emberData['default'].belongsTo(),
-    fromConnections: _emberData['default'].hasMany('connection', { inverse: 'fromStep' }),
-    toConnections: _emberData['default'].hasMany('connection', { inverse: 'toStep' }),
-
-    left: _emberData['default'].attr('number'),
-    top: _emberData['default'].attr('number'),
-    width: _emberData['default'].attr('number'),
-    height: _emberData['default'].attr('number'),
-
-    stereotype: Ember.computed(function () {
-      return this.constructor.modelName;
-    }),
-
-    screenId: Ember.computed('id', function () {
-      return this.constructor.modelName + '-' + this.get('id');
-    })
-
-  });
-});
-define('spaircorp-ui/models/textarea-control', ['exports', 'spaircorp-ui/models/control'], function (exports, _spaircorpUiModelsControl) {
-  exports['default'] = _spaircorpUiModelsControl['default'].extend({
-    title: 'Textarea',
-    controlType: 'textarea'
-  });
-});
-// import DS from 'ember-data';
-define('spaircorp-ui/models/textbox-control', ['exports', 'spaircorp-ui/models/control'], function (exports, _spaircorpUiModelsControl) {
-  exports['default'] = _spaircorpUiModelsControl['default'].extend({
-    title: 'Textbox',
-    controlType: 'textbox'
-  });
-});
-// import DS from 'ember-data';
 define('spaircorp-ui/resolver', ['exports', 'ember-resolver'], function (exports, _emberResolver) {
   exports['default'] = _emberResolver['default'];
 });
@@ -2953,10 +2461,12 @@ define('spaircorp-ui/routes/admin/scripts/edit', ['exports', 'ember'], function 
         });
       },
 
-      onEditNode: function onEditNode(obj) {
-        // FIXMe hard coded process
-        debugger;
-        this.transitionTo('admin.scripts.edit.process-step.edit', this.modelFor(this.routeName), 1);
+      onEditNode: function onEditNode(params) {
+        var type = params.info.obj.data.type;
+        if (type === 'process') {
+          // FIXMe hard coded process
+          this.transitionTo('admin.scripts.edit.process-step.edit', this.modelFor(this.routeName), 1);
+        }
       },
 
       save: function save() {
@@ -3255,7 +2765,7 @@ define("spaircorp-ui/templates/admin/scripts", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template({ "id": "ICHzcUK9", "block": "{\"statements\":[[\"append\",[\"unknown\",[\"outlet\"]],false]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts.hbs" } });
 });
 define("spaircorp-ui/templates/admin/scripts/edit", ["exports"], function (exports) {
-  exports["default"] = Ember.HTMLBars.template({ "id": "e/FhlYDB", "block": "{\"statements\":[[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-group\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"label\",[]],[\"static-attr\",\"for\",\"script-name\"],[\"flush-element\"],[\"text\",\"Name\"],[\"close-element\"],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"one-way-input\"],[[\"get\",[\"model\",\"name\"]]],[[\"placeholder\",\"update\",\"class\"],[\"Name\",[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"model\",\"name\"]]],null]],null],\"form-control\"]]],false],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"checkbox\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"label\",[]],[\"flush-element\"],[\"append\",[\"helper\",[\"one-way-checkbox\"],[[\"get\",[\"autoSave\"]]],[[\"update\"],[[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"autoSave\"]]],null]],null]]]],false],[\"text\",\"Auto Save\"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"open-element\",\"hr\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"block\",[\"jsplumb-toolkit\"],null,[[\"data\",\"on-dbl-click-edge\",\"on-edit-node\",\"before-drop\"],[[\"helper\",[\"readonly\"],[[\"get\",[\"data\"]]],null],[\"helper\",[\"route-action\"],[\"onDblClickEdge\"],null],[\"helper\",[\"route-action\"],[\"onEditNode\"],null],[\"helper\",[\"route-action\"],[\"beforeDrop\"],null]]],0],[\"text\",\"\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"row\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"hr\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"async-button\"],null,[[\"class\",\"action\",\"default\",\"pending\"],[\"btn btn-default col-xs-6\",[\"helper\",[\"route-action\"],[\"test\",[\"get\",[\"model\"]]],null],\"Test\",\"Please wait...\"]]],false],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"async-button\"],null,[[\"class\",\"action\",\"default\",\"pending\"],[\"btn btn-primary col-xs-6\",[\"helper\",[\"route-action\"],[\"save\",[\"get\",[\"model\"]]],null],\"Save\",\"Saving...\"]]],false],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\\n\\n\\n\\n\\n\"],[\"text\",\"\\n\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[{\"statements\":[[\"text\",\"\\n  \"],[\"append\",[\"unknown\",[\"outlet\"]],false],[\"text\",\"\\n\"]],\"locals\":[]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts/edit.hbs" } });
+  exports["default"] = Ember.HTMLBars.template({ "id": "2O47IQSU", "block": "{\"statements\":[[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-group\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"label\",[]],[\"static-attr\",\"for\",\"script-name\"],[\"flush-element\"],[\"text\",\"Name\"],[\"close-element\"],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"one-way-input\"],[[\"get\",[\"model\",\"name\"]]],[[\"placeholder\",\"update\",\"class\"],[\"Name\",[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"model\",\"name\"]]],null]],null],\"form-control\"]]],false],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"checkbox\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"label\",[]],[\"flush-element\"],[\"append\",[\"helper\",[\"one-way-checkbox\"],[[\"get\",[\"autoSave\"]]],[[\"update\"],[[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"autoSave\"]]],null]],null]]]],false],[\"text\",\"Auto Save\"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"open-element\",\"hr\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"block\",[\"jsplumb-toolkit\"],null,[[\"data\",\"on-dbl-click-edge\",\"on-edit-node\",\"before-drop\"],[[\"helper\",[\"readonly\"],[[\"get\",[\"model\",\"diagram\"]]],null],[\"helper\",[\"route-action\"],[\"onDblClickEdge\"],null],[\"helper\",[\"route-action\"],[\"onEditNode\"],null],[\"helper\",[\"route-action\"],[\"beforeDrop\"],null]]],0],[\"text\",\"\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"row\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"hr\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"async-button\"],null,[[\"class\",\"action\",\"default\",\"pending\"],[\"btn btn-default col-xs-6\",[\"helper\",[\"route-action\"],[\"test\",[\"get\",[\"model\"]]],null],\"Test\",\"Please wait...\"]]],false],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"async-button\"],null,[[\"class\",\"action\",\"default\",\"pending\"],[\"btn btn-primary col-xs-6\",[\"helper\",[\"route-action\"],[\"save\",[\"get\",[\"model\"]]],null],\"Save\",\"Saving...\"]]],false],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\\n\\n\\n\\n\\n\"],[\"text\",\"\\n\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[{\"statements\":[[\"text\",\"\\n  \"],[\"append\",[\"unknown\",[\"outlet\"]],false],[\"text\",\"\\n\"]],\"locals\":[]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts/edit.hbs" } });
 });
 define("spaircorp-ui/templates/admin/scripts/edit/process-step/edit", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template({ "id": "opkIbQQK", "block": "{\"statements\":[[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"animated slideInRight diagram-overlay\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"row\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"col-xs-12\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"button\",[]],[\"static-attr\",\"class\",\"btn btn-danger\"],[\"dynamic-attr\",\"onclick\",[\"helper\",[\"route-action\"],[\"close\"],null],null],[\"flush-element\"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-times fa-2x\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"h4 text-muted\"],[\"flush-element\"],[\"append\",[\"unknown\",[\"model\",\"name\"]],false],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"row\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"col-xs-4\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"padding-left:3px\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"h3\",[]],[\"flush-element\"],[\"text\",\"Controls\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"textbox-control\",\"control-toolbox\"]]]]],11],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"textarea-control\",\"control-toolbox\"]]]]],10],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"checkbox-control\",\"control-toolbox\"]]]]],9],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"currency-control\",\"control-toolbox\"]]]]],8],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"date-control\",\"control-toolbox\"]]]]],7],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"list-control\",\"control-toolbox\"]]]]],6],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"number-control\",\"control-toolbox\"]]]]],5],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"control\",\"origin\"],[\"radio-control\",\"control-toolbox\"]]]]],4],[\"text\",\"      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"col-xs-8\"],[\"flush-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object-target\"],null,[[\"action\",\"class\"],[\"add\",\"controls\"]],3],[\"text\",\"    \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\\n\\n\\n\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[{\"statements\":[[\"text\",\"              \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"cursor: move\"],[\"static-attr\",\"class\",\"js-control-drag-handle\"],[\"flush-element\"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-sort\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" \"],[\"open-element\",\"small\",[]],[\"flush-element\"],[\"append\",[\"unknown\",[\"control\",\"title\"]],false],[\"close-element\"],[\"close-element\"],[\"text\",\"\\n              \"],[\"append\",[\"helper\",[\"component\"],[[\"helper\",[\"concat\"],[\"config-\",[\"get\",[\"control\",\"controlType\"]],\"-control\"],null]],[[\"control\"],[[\"get\",[\"control\"]]]]],false],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"block\",[\"draggable-object\"],null,[[\"class\",\"content\",\"isSortable\",\"sortingScope\",\"dragHandle\"],[\"control-group\",[\"get\",[\"control\"]],true,\"sortingGroup\",\".js-control-drag-handle\"]],0]],\"locals\":[\"control\"]},{\"statements\":[[\"text\",\" \"],[\"text\",\"\\n\"],[\"block\",[\"each\"],[[\"get\",[\"model\",\"controls\"]]],null,1]],\"locals\":[]},{\"statements\":[[\"text\",\"        \"],[\"block\",[\"sortable-objects\"],null,[[\"sortableObjectList\",\"enableSort\",\"useSwap\",\"sortingScope\"],[[\"get\",[\"model\",\"controls\"]],true,true,\"sortingGroup\"]],2]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"radio form-control config-control\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"label\",[]],[\"flush-element\"],[\"text\",\"\\n              \"],[\"open-element\",\"input\",[]],[\"static-attr\",\"type\",\"radio\"],[\"static-attr\",\"checked\",\"\"],[\"static-attr\",\"disabled\",\"\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"Radio\\n            \"],[\"close-element\"],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"input-group\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"input-group-addon\"],[\"flush-element\"],[\"text\",\"#\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"input\",[]],[\"static-attr\",\"type\",\"number\"],[\"static-attr\",\"class\",\"form-control config-control\"],[\"static-attr\",\"readonly\",\"\"],[\"static-attr\",\"placeholder\",\"Number\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"select\",[]],[\"static-attr\",\"class\",\"form-control config-control\"],[\"static-attr\",\"disabled\",\"\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"option\",[]],[\"static-attr\",\"selected\",\"\"],[\"flush-element\"],[\"text\",\"List\"],[\"close-element\"],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"input-group\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"input-group-addon\"],[\"flush-element\"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-calendar\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"input\",[]],[\"static-attr\",\"type\",\"date\"],[\"static-attr\",\"class\",\"form-control config-control\"],[\"static-attr\",\"readonly\",\"\"],[\"static-attr\",\"value\",\"Date Picker\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"input-group\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"input-group-addon\"],[\"flush-element\"],[\"text\",\"$\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"input\",[]],[\"static-attr\",\"type\",\"number\"],[\"static-attr\",\"class\",\"form-control config-control\"],[\"static-attr\",\"readonly\",\"\"],[\"static-attr\",\"placeholder\",\"Currency\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"checkbox form-control config-control\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"label\",[]],[\"flush-element\"],[\"text\",\"\\n              \"],[\"open-element\",\"input\",[]],[\"static-attr\",\"type\",\"checkbox\"],[\"static-attr\",\"checked\",\"\"],[\"static-attr\",\"disabled\",\"\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" Checkbox\\n            \"],[\"close-element\"],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"textarea\",[]],[\"static-attr\",\"class\",\"form-control config-control\"],[\"static-attr\",\"readonly\",\"\"],[\"flush-element\"],[\"text\",\"Text Area\"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"input\",[]],[\"static-attr\",\"class\",\"form-control config-control\"],[\"static-attr\",\"value\",\"Textbox\"],[\"static-attr\",\"readonly\",\"\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts/edit/process-step/edit.hbs" } });
@@ -3309,7 +2819,7 @@ define("spaircorp-ui/templates/components/jsplumb-palette", ["exports"], functio
   exports["default"] = Ember.HTMLBars.template({ "id": "2rhE3AGg", "block": "{\"statements\":[[\"yield\",\"default\"],[\"text\",\"\\n\"]],\"locals\":[],\"named\":[],\"yields\":[\"default\"],\"blocks\":[],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/components/jsplumb-palette.hbs" } });
 });
 define("spaircorp-ui/templates/components/jsplumb-toolkit", ["exports"], function (exports) {
-  exports["default"] = Ember.HTMLBars.template({ "id": "Pb562632", "block": "{\"statements\":[[\"comment\",\" the node palette \"],[\"text\",\"\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"sidebar node-palette\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"ul\",[]],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"li\",[]],[\"static-attr\",\"jtk-node-type\",\"start\"],[\"static-attr\",\"title\",\"Drag to add new\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"height\",\"100\"],[\"static-attr\",\"width\",\"100\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"circle\",[]],[\"static-attr\",\"cx\",\"50\"],[\"static-attr\",\"cy\",\"50\"],[\"static-attr\",\"r\",\"50\"],[\"static-attr\",\"stroke-width\",\"3\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"circle\",[]],[\"static-attr\",\"cx\",\"50\"],[\"static-attr\",\"cy\",\"50\"],[\"static-attr\",\"r\",\"40\"],[\"static-attr\",\"stroke-width\",\"3\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"50\"],[\"static-attr\",\"y\",\"50\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"Start\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"li\",[]],[\"static-attr\",\"jtk-node-type\",\"decision\"],[\"static-attr\",\"title\",\"Drag to add new\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"width\",\"120\"],[\"static-attr\",\"height\",\"120\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"rect\",[]],[\"static-attr\",\"y\",\"50\"],[\"static-attr\",\"x\",\"50\"],[\"static-attr\",\"width\",\"80\"],[\"static-attr\",\"height\",\"80\"],[\"static-attr\",\"transform\",\"rotate(45 115 40)\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"x\",\"10\"],[\"static-attr\",\"y\",\"10\"],[\"flush-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"rect\",[]],[\"static-attr\",\"width\",\"60\"],[\"static-attr\",\"height\",\"60\"],[\"static-attr\",\"transform\",\"rotate(45 20 65)\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"60\"],[\"static-attr\",\"y\",\"60\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"Decision\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"li\",[]],[\"static-attr\",\"jtk-node-type\",\"process\"],[\"static-attr\",\"title\",\"Drag to add new\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"height\",\"100\"],[\"static-attr\",\"width\",\"100\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"rect\",[]],[\"static-attr\",\"width\",\"100\"],[\"static-attr\",\"height\",\"100\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"x\",\"10\"],[\"static-attr\",\"y\",\"10\"],[\"flush-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"rect\",[]],[\"static-attr\",\"width\",\"80\"],[\"static-attr\",\"height\",\"80\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"50\"],[\"static-attr\",\"y\",\"50\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"Process\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"li\",[]],[\"static-attr\",\"jtk-node-type\",\"output\"],[\"static-attr\",\"title\",\"Drag to add new\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"height\",\"100\"],[\"static-attr\",\"width\",\"100\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"circle\",[]],[\"static-attr\",\"cx\",\"50\"],[\"static-attr\",\"cy\",\"50\"],[\"static-attr\",\"r\",\"50\"],[\"static-attr\",\"stroke-width\",\"3\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"circle\",[]],[\"static-attr\",\"cx\",\"50\"],[\"static-attr\",\"cy\",\"50\"],[\"static-attr\",\"r\",\"40\"],[\"static-attr\",\"stroke-width\",\"3\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"50\"],[\"static-attr\",\"y\",\"50\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"Finish\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"yield\",\"default\"],[\"text\",\"\\n\\n\"],[\"comment\",\" this is the main drawing area \"],[\"text\",\"\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"jtk-canvas\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"comment\",\" controls \"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"controls\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-arrows selected-mode\"],[\"static-attr\",\"mode\",\"pan\"],[\"static-attr\",\"title\",\"Pan Mode\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-pencil\"],[\"static-attr\",\"mode\",\"select\"],[\"static-attr\",\"title\",\"Select Mode\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-home\"],[\"static-attr\",\"reset\",\"\"],[\"static-attr\",\"title\",\"Zoom To Fit\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"comment\",\" miniview \"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"miniview\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\"],[\"open-element\",\"script\",[]],[\"static-attr\",\"type\",\"jtk\"],[\"static-attr\",\"id\",\"tmplStart\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"left:${left}px;top:${top}px;width:${w}px;height:${h}px;\"],[\"static-attr\",\"class\",\"flowchart-object flowchart-start\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"position:relative\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"svg:svg\",[]],[\"static-attr\",\"width\",\"${w}\"],[\"static-attr\",\"height\",\"${h}\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:ellipse\",[]],[\"static-attr\",\"cx\",\"${w/2}\"],[\"static-attr\",\"cy\",\"${h/2}\"],[\"static-attr\",\"rx\",\"${w/2}\"],[\"static-attr\",\"ry\",\"${h/2}\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:ellipse\",[]],[\"static-attr\",\"cx\",\"${w/2}\"],[\"static-attr\",\"cy\",\"${h/2}\"],[\"static-attr\",\"rx\",\"${(w/2) - 10}\"],[\"static-attr\",\"ry\",\"${(h/2) - 10}\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"${ w / 2 }\"],[\"static-attr\",\"y\",\"${ h / 2 }\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"${text}\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"jtk-source\",[]],[\"static-attr\",\"port-type\",\"start\"],[\"static-attr\",\"filter\",\".outer\"],[\"static-attr\",\"filter-negate\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"open-element\",\"script\",[]],[\"static-attr\",\"type\",\"jtk\"],[\"static-attr\",\"id\",\"tmplProcess\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"left:${left}px;top:${top}px;width:${w}px;height:${h}px;\"],[\"static-attr\",\"class\",\"flowchart-object flowchart-process\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"position:relative\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"node-edit node-action\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-pencil-square-o\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"node-delete node-action\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-times\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"svg:svg\",[]],[\"static-attr\",\"width\",\"${w}\"],[\"static-attr\",\"height\",\"${h}\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:rect\",[]],[\"static-attr\",\"x\",\"0\"],[\"static-attr\",\"y\",\"0\"],[\"static-attr\",\"width\",\"${w}\"],[\"static-attr\",\"height\",\"${h}\"],[\"static-attr\",\"class\",\"outer drag-start\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:rect\",[]],[\"static-attr\",\"x\",\"10\"],[\"static-attr\",\"y\",\"10\"],[\"static-attr\",\"width\",\"${w-20}\"],[\"static-attr\",\"height\",\"${h-20}\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"${w/2}\"],[\"static-attr\",\"y\",\"${h/2}\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"${text}\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"jtk-target\",[]],[\"static-attr\",\"port-type\",\"target\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"jtk-source\",[]],[\"static-attr\",\"port-type\",\"source\"],[\"static-attr\",\"filter\",\".outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"open-element\",\"script\",[]],[\"static-attr\",\"type\",\"jtk\"],[\"static-attr\",\"id\",\"tmplDecision\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"left:${left}px;top:${top}px;width:${w}px;height:${h}px;\"],[\"static-attr\",\"class\",\"flowchart-object flowchart-decision\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"position:relative\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"node-edit node-action\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-pencil-square-o\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"node-delete node-action\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-times\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"svg:svg\",[]],[\"static-attr\",\"width\",\"${w}\"],[\"static-attr\",\"height\",\"${h}\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:path\",[]],[\"static-attr\",\"d\",\"M ${w/2} 0 L ${w} ${h/2} L ${w/2} ${h} L 0 ${h/2} Z\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:path\",[]],[\"static-attr\",\"d\",\"M ${w/2} 10 L ${w-10} ${h/2} L ${w/2} ${h-10} L 10 ${h/2} Z\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"${w/2}\"],[\"static-attr\",\"y\",\"${h/2}\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"${text}\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"jtk-source\",[]],[\"static-attr\",\"port-type\",\"source\"],[\"static-attr\",\"filter\",\".outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"jtk-target\",[]],[\"static-attr\",\"port-type\",\"target\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"open-element\",\"script\",[]],[\"static-attr\",\"type\",\"jtk\"],[\"static-attr\",\"id\",\"tmplFinish\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"left:${left}px;top:${top}px;width:${w}px;height:${h}px;\"],[\"static-attr\",\"class\",\"flowchart-object flowchart-finish\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"position:relative\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"node-edit node-action\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-pencil-square-o\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"node-delete node-action\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-times\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"svg:svg\",[]],[\"static-attr\",\"width\",\"${w}\"],[\"static-attr\",\"height\",\"${h}\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:rect\",[]],[\"static-attr\",\"x\",\"0\"],[\"static-attr\",\"y\",\"0\"],[\"static-attr\",\"width\",\"${w}\"],[\"static-attr\",\"height\",\"${h}\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"svg:text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"${w/2}\"],[\"static-attr\",\"y\",\"${h/2}\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"${text}\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"jtk-target\",[]],[\"static-attr\",\"port-type\",\"target\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"comment\",\" edit text (question or action or output or edge label) \"],[\"text\",\"\\n\\n\"]],\"locals\":[],\"named\":[],\"yields\":[\"default\"],\"blocks\":[],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/components/jsplumb-toolkit.hbs" } });
+  exports["default"] = Ember.HTMLBars.template({ "id": "1y0ryaE5", "block": "{\"statements\":[[\"comment\",\" the node palette \"],[\"text\",\"\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"sidebar node-palette\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"ul\",[]],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"li\",[]],[\"static-attr\",\"jtk-node-type\",\"start\"],[\"static-attr\",\"title\",\"Drag to add new\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"height\",\"100\"],[\"static-attr\",\"width\",\"100\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"circle\",[]],[\"static-attr\",\"cx\",\"50\"],[\"static-attr\",\"cy\",\"50\"],[\"static-attr\",\"r\",\"50\"],[\"static-attr\",\"stroke-width\",\"3\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"circle\",[]],[\"static-attr\",\"cx\",\"50\"],[\"static-attr\",\"cy\",\"50\"],[\"static-attr\",\"r\",\"40\"],[\"static-attr\",\"stroke-width\",\"3\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"50\"],[\"static-attr\",\"y\",\"50\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"Start\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"li\",[]],[\"static-attr\",\"jtk-node-type\",\"decision\"],[\"static-attr\",\"title\",\"Drag to add new\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"width\",\"120\"],[\"static-attr\",\"height\",\"120\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"rect\",[]],[\"static-attr\",\"y\",\"50\"],[\"static-attr\",\"x\",\"50\"],[\"static-attr\",\"width\",\"80\"],[\"static-attr\",\"height\",\"80\"],[\"static-attr\",\"transform\",\"rotate(45 115 40)\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"x\",\"10\"],[\"static-attr\",\"y\",\"10\"],[\"flush-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"rect\",[]],[\"static-attr\",\"width\",\"60\"],[\"static-attr\",\"height\",\"60\"],[\"static-attr\",\"transform\",\"rotate(45 20 65)\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"60\"],[\"static-attr\",\"y\",\"60\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"Decision\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"li\",[]],[\"static-attr\",\"jtk-node-type\",\"process\"],[\"static-attr\",\"title\",\"Drag to add new\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"height\",\"100\"],[\"static-attr\",\"width\",\"100\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"rect\",[]],[\"static-attr\",\"width\",\"100\"],[\"static-attr\",\"height\",\"100\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"x\",\"10\"],[\"static-attr\",\"y\",\"10\"],[\"flush-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"rect\",[]],[\"static-attr\",\"width\",\"80\"],[\"static-attr\",\"height\",\"80\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"50\"],[\"static-attr\",\"y\",\"50\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"Process\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"li\",[]],[\"static-attr\",\"jtk-node-type\",\"output\"],[\"static-attr\",\"title\",\"Drag to add new\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"svg\",[]],[\"static-attr\",\"height\",\"100\"],[\"static-attr\",\"width\",\"100\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"circle\",[]],[\"static-attr\",\"cx\",\"50\"],[\"static-attr\",\"cy\",\"50\"],[\"static-attr\",\"r\",\"50\"],[\"static-attr\",\"stroke-width\",\"3\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"outer\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"circle\",[]],[\"static-attr\",\"cx\",\"50\"],[\"static-attr\",\"cy\",\"50\"],[\"static-attr\",\"r\",\"40\"],[\"static-attr\",\"stroke-width\",\"3\"],[\"static-attr\",\"fill\",\"white\"],[\"static-attr\",\"class\",\"inner\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"text\",[]],[\"static-attr\",\"text-anchor\",\"middle\"],[\"static-attr\",\"x\",\"50\"],[\"static-attr\",\"y\",\"50\"],[\"static-attr\",\"dominant-baseline\",\"central\"],[\"flush-element\"],[\"text\",\"Finish\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"yield\",\"default\"],[\"text\",\"\\n\\n\"],[\"comment\",\" this is the main drawing area \"],[\"text\",\"\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"jtk-canvas\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"comment\",\" controls \"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"controls\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-arrows selected-mode\"],[\"static-attr\",\"mode\",\"pan\"],[\"static-attr\",\"title\",\"Pan Mode\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-pencil\"],[\"static-attr\",\"mode\",\"select\"],[\"static-attr\",\"title\",\"Select Mode\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-home\"],[\"static-attr\",\"reset\",\"\"],[\"static-attr\",\"title\",\"Zoom To Fit\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"comment\",\" miniview \"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"miniview\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\\n\"]],\"locals\":[],\"named\":[],\"yields\":[\"default\"],\"blocks\":[],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/components/jsplumb-toolkit.hbs" } });
 });
 define("spaircorp-ui/templates/components/object-bin", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template({ "id": "m+7o/FOB", "block": "{\"statements\":[[\"block\",[\"draggable-object-target\"],null,[[\"action\"],[\"handleObjectDropped\"]],2]],\"locals\":[],\"named\":[],\"yields\":[\"default\"],\"blocks\":[{\"statements\":[[\"text\",\"      \"],[\"yield\",\"default\",[[\"get\",[\"obj\"]]]],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"block\",[\"draggable-object\"],null,[[\"action\",\"content\"],[\"handleObjectDragged\",[\"get\",[\"obj\"]]]],0]],\"locals\":[\"obj\"]},{\"statements\":[[\"text\",\"  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"object-bin-title\"],[\"flush-element\"],[\"append\",[\"unknown\",[\"name\"]],false],[\"close-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"each\"],[[\"get\",[\"model\"]]],null,1]],\"locals\":[]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/components/object-bin.hbs" } });
@@ -3333,165 +2843,11 @@ define('spaircorp-ui/tests/mirage/mirage/config.lint-test', ['exports'], functio
     assert.ok(true, 'mirage/config.js should pass ESLint.\n');
   });
 });
-define('spaircorp-ui/tests/mirage/mirage/factories/checkbox-control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/factories/checkbox-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/factories/checkbox-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/factories/connection.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/factories/connection.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/factories/connection.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/factories/date-control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/factories/date-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/factories/date-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/factories/decision-step.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/factories/decision-step.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/factories/decision-step.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/factories/finish-step.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/factories/finish-step.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/factories/finish-step.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/factories/list-control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/factories/list-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/factories/list-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/factories/number-control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/factories/number-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/factories/number-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/factories/process-step.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/factories/process-step.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/factories/process-step.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/factories/radio-control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/factories/radio-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/factories/radio-control.js should pass ESLint.\n');
-  });
-});
 define('spaircorp-ui/tests/mirage/mirage/factories/script.lint-test', ['exports'], function (exports) {
   QUnit.module('ESLint - mirage/factories/script.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
     assert.ok(true, 'mirage/factories/script.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/factories/start-step.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/factories/start-step.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/factories/start-step.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/factories/textarea-control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/factories/textarea-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/factories/textarea-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/factories/textbox-control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/factories/textbox-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/factories/textbox-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/models/checkbox-control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/models/checkbox-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/models/checkbox-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/models/connection.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/models/connection.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/models/connection.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/models/control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/models/control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/models/control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/models/date-control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/models/date-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/models/date-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/models/decision-step.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/models/decision-step.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/models/decision-step.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/models/finish-step.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/models/finish-step.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/models/finish-step.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/models/list-control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/models/list-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/models/list-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/models/number-control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/models/number-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/models/number-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/models/process-step.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/models/process-step.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/models/process-step.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/models/radio-control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/models/radio-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/models/radio-control.js should pass ESLint.\n');
   });
 });
 define('spaircorp-ui/tests/mirage/mirage/models/script.lint-test', ['exports'], function (exports) {
@@ -3501,46 +2857,11 @@ define('spaircorp-ui/tests/mirage/mirage/models/script.lint-test', ['exports'], 
     assert.ok(true, 'mirage/models/script.js should pass ESLint.\n');
   });
 });
-define('spaircorp-ui/tests/mirage/mirage/models/start-step.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/models/start-step.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/models/start-step.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/models/step.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/models/step.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/models/step.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/models/textarea-control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/models/textarea-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/models/textarea-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/models/textbox-control.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/models/textbox-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/models/textbox-control.js should pass ESLint.\n');
-  });
-});
 define('spaircorp-ui/tests/mirage/mirage/scenarios/default.lint-test', ['exports'], function (exports) {
   QUnit.module('ESLint - mirage/scenarios/default.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(false, 'mirage/scenarios/default.js should pass ESLint.\n39:9  - \'connection2\' is assigned a value but never used. (no-unused-vars)\n45:9  - \'script1\' is assigned a value but never used. (no-unused-vars)\n50:9  - \'script2\' is assigned a value but never used. (no-unused-vars)\n51:9  - \'script3\' is assigned a value but never used. (no-unused-vars)');
-  });
-});
-define('spaircorp-ui/tests/mirage/mirage/serializers/application.lint-test', ['exports'], function (exports) {
-  QUnit.module('ESLint - mirage/serializers/application.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'mirage/serializers/application.js should pass ESLint.\n');
+    assert.ok(false, 'mirage/scenarios/default.js should pass ESLint.\n10:9  - \'script1\' is assigned a value but never used. (no-unused-vars)\n26:9  - \'script2\' is assigned a value but never used. (no-unused-vars)');
   });
 });
 define('spaircorp-ui/tests/mirage/mirage/serializers/script.lint-test', ['exports'], function (exports) {
@@ -3548,6 +2869,17 @@ define('spaircorp-ui/tests/mirage/mirage/serializers/script.lint-test', ['export
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
     assert.ok(true, 'mirage/serializers/script.js should pass ESLint.\n');
+  });
+});
+define('spaircorp-ui/transforms/raw', ['exports', 'ember-data'], function (exports, _emberData) {
+  exports['default'] = _emberData['default'].Transform.extend({
+    deserialize: function deserialize(serialized) {
+      return serialized;
+    },
+
+    serialize: function serialize(deserialized) {
+      return deserialized;
+    }
   });
 });
 define('spaircorp-ui/transitions', ['exports'], function (exports) {
