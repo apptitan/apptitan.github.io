@@ -239,7 +239,8 @@ define('spaircorp-ui/components/jsplumb-toolkit', ['exports', 'ember'], function
 
           // Saving
           autoSave: true,
-          saveUrl: "http://localhost:4200/scripts/2/diagram", // FIXME ****************** pass in as parameter
+          // saveUrl: "http://localhost:4200/scripts/2/diagram", // FIXME ****************** pass in as parameter
+          saveUrl: "/scripts/2/diagram", // FIXME ****************** pass in as parameter
           onAutoSaveError: function onAutoSaveError(msg) {
             _ember['default'].debug('Saving script has failed!');
             alert('Save Failed!');
