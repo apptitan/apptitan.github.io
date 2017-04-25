@@ -5481,3 +5481,9 @@ button.close {
   cursor: move !important;
   background-color: white !important;
   border: thin dotted #66afe9 !important; }
+
+.control-drop-area {
+  width: 100%;
+  height: 500px;
+  background-color: lightgrey;
+  overflow-y: scroll; }

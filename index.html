@@ -8,83 +8,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
 
     
-<meta name="spaircorp-ui/config/environment" content="%7B%22modulePrefix%22%3A%22spaircorp-ui%22%2C%22environment%22%3A%22demo%22%2C%22rootURL%22%3A%22/%22%2C%22locationType%22%3A%22hash%22%2C%22EmberENV%22%3A%7B%22FEATURES%22%3A%7B%7D%2C%22EXTEND_PROTOTYPES%22%3A%7B%22Date%22%3Afalse%7D%7D%2C%22APP%22%3A%7B%22name%22%3A%22spaircorp-ui%22%2C%22version%22%3A%220.0.0+040021ed%22%7D%2C%22ember-cli-mirage%22%3A%7B%22enabled%22%3Atrue%2C%22usingProxy%22%3Afalse%2C%22useDefaultPassthroughs%22%3Atrue%7D%2C%22exportApplicationGlobal%22%3Atrue%7D" />
+<meta name="spaircorp-ui/config/environment" content="%7B%22modulePrefix%22%3A%22spaircorp-ui%22%2C%22environment%22%3A%22demo%22%2C%22rootURL%22%3A%22/%22%2C%22locationType%22%3A%22hash%22%2C%22EmberENV%22%3A%7B%22FEATURES%22%3A%7B%7D%2C%22EXTEND_PROTOTYPES%22%3A%7B%22Date%22%3Afalse%7D%7D%2C%22APP%22%3A%7B%22name%22%3A%22spaircorp-ui%22%2C%22version%22%3A%220.0.0+ad6c428c%22%7D%2C%22ember-cli-mirage%22%3A%7B%22enabled%22%3Atrue%2C%22usingProxy%22%3Afalse%2C%22useDefaultPassthroughs%22%3Atrue%7D%2C%22exportApplicationGlobal%22%3Atrue%7D" />
 
     <link rel="stylesheet" href="/assets/vendor.css">
     <link rel="stylesheet" href="/assets/spaircorp-ui.css">
-
-    <!-- Work out how to do this properly later -->
-    <script type="jtk" id="tmplStart">
-    <div style="left:${left}px;top:${top}px;width:${w}px;height:${h}px;" class="flowchart-object flowchart-start">
-        <div style="position:relative">
-            <svg:svg width="${w}" height="${h}">
-                <svg:ellipse cx="${w/2}" cy="${h/2}" rx="${w/2}" ry="${h/2}" class="outer"/>
-                <svg:ellipse cx="${w/2}" cy="${h/2}" rx="${(w/2) - 10}" ry="${(h/2) - 10}" class="inner"/>
-                <svg:text text-anchor="middle" x="${ w / 2 }" y="${ h / 2 }" dominant-baseline="central">${text}</svg:text>
-            </svg:svg>
-        </div>
-        <jtk-source port-type="start" filter=".outer" filter-negate="true"/>
-    </div>
-    </script>
-
-    <script type="jtk" id="tmplProcess">
-    <div style="left:${left}px;top:${top}px;width:${w}px;height:${h}px;" class="flowchart-object flowchart-process">
-        <div style="position:relative">
-            <div class="node-edit node-action">
-                <i class="fa fa-pencil-square-o"/>
-            </div>
-            <div class="node-delete node-action">
-                <i class="fa fa-times"/>
-            </div>
-            <svg:svg width="${w}" height="${h}">
-                <svg:rect x="0" y="0" width="${w}" height="${h}" class="outer drag-start"/>
-                <svg:rect x="10" y="10" width="${w-20}" height="${h-20}" class="inner"/>
-                <svg:text text-anchor="middle" x="${w/2}" y="${h/2}" dominant-baseline="central">${text}</svg:text>
-            </svg:svg>
-        </div>
-        <jtk-target port-type="target"/>
-        <jtk-source port-type="source" filter=".outer"/>
-    </div>
-    </script>
-
-    <script type="jtk" id="tmplDecision">
-    <div style="left:${left}px;top:${top}px;width:${w}px;height:${h}px;" class="flowchart-object flowchart-decision">
-        <div style="position:relative">
-            <div class="node-edit node-action">
-                <i class="fa fa-pencil-square-o"/>
-            </div>
-            <div class="node-delete node-action">
-                <i class="fa fa-times"/>
-            </div>
-            <svg:svg width="${w}" height="${h}">
-                <svg:path d="M ${w/2} 0 L ${w} ${h/2} L ${w/2} ${h} L 0 ${h/2} Z" class="outer"/>
-                <svg:path d="M ${w/2} 10 L ${w-10} ${h/2} L ${w/2} ${h-10} L 10 ${h/2} Z" class="inner"/>
-                <svg:text text-anchor="middle" x="${w/2}" y="${h/2}" dominant-baseline="central">${text}</svg:text>
-            </svg:svg>
-        </div>
-        <jtk-source port-type="source" filter=".outer"/>
-        <jtk-target port-type="target"/>
-    </div>
-    </script>
-
-    <script type="jtk" id="tmplFinish">
-    <div style="left:${left}px;top:${top}px;width:${w}px;height:${h}px;" class="flowchart-object flowchart-finish">
-        <div style="position:relative">
-            <div class="node-edit node-action">
-                <i class="fa fa-pencil-square-o"/>
-            </div>
-            <div class="node-delete node-action">
-                <i class="fa fa-times"/>
-            </div>
-            <svg:svg width="${w}" height="${h}">
-                <svg:rect x="0" y="0" width="${w}" height="${h}"/>
-                <svg:text text-anchor="middle" x="${w/2}" y="${h/2}" dominant-baseline="central">${text}</svg:text>
-            </svg:svg>
-        </div>
-        <jtk-target port-type="target"/>
-    </div>
-    </script>
-    <!-- Work out how to do this properly later -->
 
     <meta name="spaircorp-ui/config/asset-manifest" content="%7B%22bundles%22%3A%7B%7D%7D" />
   </head>
