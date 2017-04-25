@@ -9,76 +9,22 @@ define('spaircorp-ui/tests/app.lint-test', ['exports'], function (exports) {
     assert.ok(true, 'app.js should pass ESLint.\n');
   });
 });
-define('spaircorp-ui/tests/components/config-checkbox-control.lint-test', ['exports'], function (exports) {
+define('spaircorp-ui/tests/components/config-input-control.lint-test', ['exports'], function (exports) {
   'use strict';
 
-  QUnit.module('ESLint - components/config-checkbox-control.js');
+  QUnit.module('ESLint - components/config-input-control.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(true, 'components/config-checkbox-control.js should pass ESLint.\n');
+    assert.ok(true, 'components/config-input-control.js should pass ESLint.\n');
   });
 });
-define('spaircorp-ui/tests/components/config-currency-control.lint-test', ['exports'], function (exports) {
+define('spaircorp-ui/tests/components/config-options-control.lint-test', ['exports'], function (exports) {
   'use strict';
 
-  QUnit.module('ESLint - components/config-currency-control.js');
+  QUnit.module('ESLint - components/config-options-control.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(true, 'components/config-currency-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/components/config-date-control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - components/config-date-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'components/config-date-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/components/config-list-control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - components/config-list-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'components/config-list-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/components/config-number-control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - components/config-number-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'components/config-number-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/components/config-radio-control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - components/config-radio-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'components/config-radio-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/components/config-textarea-control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - components/config-textarea-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'components/config-textarea-control.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/components/config-textbox-control.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - components/config-textbox-control.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(true, 'components/config-textbox-control.js should pass ESLint.\n');
+    assert.ok(true, 'components/config-options-control.js should pass ESLint.\n');
   });
 });
 define('spaircorp-ui/tests/components/jsplumb-miniview.lint-test', ['exports'], function (exports) {
@@ -326,7 +272,7 @@ define('spaircorp-ui/tests/routes/admin/scripts/edit/process/edit.lint-test', ['
   QUnit.module('ESLint - routes/admin/scripts/edit/process/edit.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(false, 'routes/admin/scripts/edit/process/edit.js should pass ESLint.\n7:9  - \'params\' is defined but never used. (no-unused-vars)\n13:5  - Unexpected \'debugger\' statement. (no-debugger)');
+    assert.ok(false, 'routes/admin/scripts/edit/process/edit.js should pass ESLint.\n7:9  - \'params\' is defined but never used. (no-unused-vars)');
   });
 });
 define('spaircorp-ui/tests/routes/admin/scripts/index.lint-test', ['exports'], function (exports) {
