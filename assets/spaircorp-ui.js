@@ -202,6 +202,18 @@ define('spaircorp-ui/components/jsplumb-toolkit', ['exports', 'ember'], function
             }
           },
           beforeConnect: function beforeConnect(source, target, edgeData) {
+            // Rule: Don't allow loopback
+            if (source.data.id === target.data.id) {
+              bootbox.alert("You can't connect a node to itself");
+              return false;
+            }
+
+            // Rule: Don't allow an outgoing connection to then return as an incomming connection
+            // if (source.data.id === source.data.id) {
+            //   bootbox.alert("You can't connect a node to itself");
+            //   return false;
+            // }
+
             // Rule: can't connect a start node to a decision node
             if (source.getType() === 'start' && target.getType() === 'decision') {
               bootbox.alert("You can't attatch a start node to a decision node");
@@ -241,7 +253,11 @@ define('spaircorp-ui/components/jsplumb-toolkit', ['exports', 'ember'], function
           },
           // Saving
           autoSave: true,
-          saveUrl: "/scripts/2/diagram", // FIXME ****************** pass in as parameter
+          saveUrl: _this.attrs['save-url'], //"/scripts/2/diagram"
+          onAutoSaveSuccess: function onAutoSaveSuccess(response) {
+            debugger;
+            _ember['default'].debug('Saved Successfully!');
+          },
           onAutoSaveError: function onAutoSaveError(msg) {
             _ember['default'].debug('Saving script has failed!');
             alert('Save Failed!');
@@ -788,6 +804,89 @@ define('spaircorp-ui/components/one-way-week', ['exports', 'ember-one-way-contro
     }
   });
 });
+define('spaircorp-ui/components/script-instance', ['exports', 'ember'], function (exports, _ember) {
+  exports['default'] = _ember['default'].Component.extend({
+
+    _currentNode: null,
+    previousNode: null,
+    currentNode: _ember['default'].computed('_currentNode', {
+      get: function get(key) {
+        return this.get('_currentNode');
+      },
+      set: function set(key, value) {
+        this.set('_currentNode', value);
+
+        if (value.type === 'finish') {
+          this.attrs.onFinish(this.get('script'));
+        }
+
+        return value;
+      }
+    }),
+
+    canPressPreviousButton: _ember['default'].computed('previousNode', function () {
+      var previousNode = this.get('previousNode');
+      return !_ember['default'].isBlank(previousNode) && previousNode.type !== 'start';
+    }),
+
+    canPressNextButton: _ember['default'].computed('currentNode', function () {
+      var currentNode = this.get('currentNode');
+      return !_ember['default'].isBlank(currentNode) && currentNode.type !== 'finish';
+    }),
+
+    // processNodes: Ember.computed('script.diagram.nodes.@each', function(nodes) {
+    //   return nodes.filterBy('type', 'process')
+    // }),
+
+    didInsertElement: function didInsertElement() {
+      var startNode = this.get('script.diagram.nodes').findBy('type', 'start');
+      this.send('advance', startNode);
+    },
+
+    actions: {
+      advance: function advance(currentNode, previousNode) {
+        debugger;
+
+        if (currentNode.type === 'start') {
+          var exitEdge = this.get('script.diagram.edges').findBy('source', currentNode.id);
+          var nextNode = this.get('script.diagram.nodes').findBy('id', exitEdge.target);
+          this.set('currentNode', nextNode);
+        } else if (currentNode.type === 'process') {
+          this.set('previousNode', currentNode);
+
+          var exitEdge = this.get('script.diagram.edges').findBy('source', currentNode.id);
+          var nextNode = this.get('script.diagram.nodes').findBy('id', exitEdge.target);
+
+          if (nextNode.type === 'decision') {
+            this.send('advance', nextNode, currentNode);
+            return;
+          } else {
+            this.set('currentNode', nextNode);
+          }
+        } else if (currentNode.type === 'decision') {
+          // Get all edges exiting the decision
+          var exitEdges = this.get('script.diagram.edges').filterBy('source', currentNode.id);
+
+          // Match by user entry
+          var branchingControl = previousNode.controls.findBy('branch', true);
+          var exitEdge = this.get('script.diagram.edges').findBy('data.label', branchingControl.answer); // FIXME ************************** HARD CODED
+
+          var nextNode = this.get('script.diagram.nodes').findBy('id', exitEdge.target);
+          this.set('currentNode', nextNode);
+        }
+      },
+
+      goTo: function goTo(node) {
+        this.set('currentNode', node);
+        this.set('previousNode', null); // TODO Need to work out how to keep a history
+      }
+    }
+
+  });
+});
+define('spaircorp-ui/components/script-step', ['exports', 'ember'], function (exports, _ember) {
+  exports['default'] = _ember['default'].Component.extend({});
+});
 define("spaircorp-ui/components/side-menu-link-to", ["exports", "ember-side-menu/components/side-menu-link-to"], function (exports, _emberSideMenuComponentsSideMenuLinkTo) {
   Object.defineProperty(exports, "default", {
     enumerable: true,
@@ -855,6 +954,10 @@ define('spaircorp-ui/config/asset-manifest', ['exports', 'spaircorp-ui/config/en
 define('spaircorp-ui/controllers/admin/scripts/edit', ['exports', 'ember'], function (exports, _ember) {
   exports['default'] = _ember['default'].Controller.extend({
 
+    saveUrl: _ember['default'].computed('model.id', function () {
+      return '/scripts/' + this.get('model.id') + '/diagram';
+    }),
+
     autoSave: true,
 
     appController: _ember['default'].inject.controller('application'),
@@ -889,6 +992,15 @@ define('spaircorp-ui/controllers/admin/scripts/edit/process/edit', ['exports', '
             }
           });
         }
+      },
+
+      'delete': function _delete(control) {
+        var controls = this.get('model.obj.data.controls');
+        var index = controls.indexOf(control);
+        controls.splice(index, 1);
+
+        // Need to manually trigger change events because it is not an ember object
+        this.notifyPropertyChange('model');
       }
     }
   });
@@ -1727,6 +1839,25 @@ define('spaircorp-ui/helpers/sort-by', ['exports', 'ember-composable-helpers/hel
     }
   });
 });
+define('spaircorp-ui/helpers/split', ['exports', 'ember'], function (exports, _ember) {
+  var _slicedToArray = (function () { function sliceIterator(arr, i) { var _arr = []; var _n = true; var _d = false; var _e = undefined; try { for (var _i = arr[Symbol.iterator](), _s; !(_n = (_s = _i.next()).done); _n = true) { _arr.push(_s.value); if (i && _arr.length === i) break; } } catch (err) { _d = true; _e = err; } finally { try { if (!_n && _i['return']) _i['return'](); } finally { if (_d) throw _e; } } return _arr; } return function (arr, i) { if (Array.isArray(arr)) { return arr; } else if (Symbol.iterator in Object(arr)) { return sliceIterator(arr, i); } else { throw new TypeError('Invalid attempt to destructure non-iterable instance'); } }; })();
+
+  exports.split = split;
+
+  function split(params, hash) {
+    var separator = hash.separator || ',';
+
+    var _params = _slicedToArray(params, 1);
+
+    var value = _params[0];
+
+    if (!value) return '';
+
+    return value.split(separator);
+  }
+
+  exports['default'] = _ember['default'].Helper.helper(split);
+});
 define('spaircorp-ui/helpers/take', ['exports', 'ember-composable-helpers/helpers/take'], function (exports, _emberComposableHelpersHelpersTake) {
   Object.defineProperty(exports, 'default', {
     enumerable: true,
@@ -2183,9 +2314,10 @@ define('spaircorp-ui/mirage/config', ['exports'], function (exports) {
     this.get('/scripts');
     this.get('/scripts/:id');
     this.post('/scripts');
-    this.put('/scripts');
+    this.patch('/scripts/:id');
     this.del('/scripts/:id');
     this.post('/scripts/:id/diagram', function (schema, request) {
+      debugger;
       var script = script = schema.scripts.find(request.params.id);
       script.diagram = JSON.parse(request.requestBody);
       script.save();
@@ -2260,7 +2392,47 @@ define("spaircorp-ui/mirage/scenarios/default", ["exports"], function (exports) 
           "top": 187,
           "w": 120,
           "h": 120,
-          "controls": []
+          "controls": [{
+            "type": "input",
+            "controlType": "Textbox",
+            "label": "Name",
+            "default": "Gold Ring"
+          }, {
+            "type": "input",
+            "controlType": "Textarea",
+            "label": "Description",
+            "default": "Made from 24K Gold, excelent condition"
+          }, {
+            "type": "input",
+            "controlType": "Currency",
+            "label": "Amount",
+            "default": "1500.00"
+          }, {
+            "type": "input",
+            "controlType": "Number",
+            "label": "Age in years",
+            "default": "14"
+          }, {
+            "type": "input",
+            "controlType": "Date",
+            "label": "Reveived on",
+            "default": ""
+          }, {
+            "type": "options",
+            "controlType": "List",
+            "label": "Colour",
+            "options": "red,gree,blue"
+          }, {
+            "type": "options",
+            "controlType": "Checkbox",
+            "label": "Suitable for",
+            "options": "Child,Male,Female"
+          }, {
+            "type": "options",
+            "controlType": "Radio",
+            "label": "Condition",
+            "options": "Poor,Good,Excellent"
+          }]
         }, {
           "id": "something",
           "type": "finish",
@@ -2321,6 +2493,115 @@ define("spaircorp-ui/mirage/scenarios/default", ["exports"], function (exports) 
           "target": "something",
           "data": { "label": "Decision Made", "type": "connection" }
         }]
+      }
+    });
+    var script3 = server.create('script', {
+      name: 'Customer Details',
+      diagram: {
+        "nodes": [{
+          "w": 120,
+          "h": 80,
+          "type": "start",
+          "left": 188,
+          "top": 8,
+          "id": "3d4ac958-b00b-49b7-85df-0ded014a4be6",
+          "text": "START"
+        }, {
+          "w": 157,
+          "h": 110,
+          "type": "process",
+          "left": 178,
+          "top": 156,
+          "text": "Enter Your Details",
+          "id": "cbfe475e-ad76-4136-9d9b-25e9ca4b7d10",
+          "controls": [{
+            "type": "input",
+            "controlType": "Textbox",
+            "label": "First Name"
+          }, {
+            "type": "input",
+            "controlType": "Textbox",
+            "label": "Surname"
+          }, {
+            "type": "options",
+            "controlType": "Radio",
+            "label": "Gender",
+            "options": "Male,Female",
+            "branch": true
+          }]
+        }, {
+          "w": 120,
+          "h": 80,
+          "type": "decision",
+          "left": 473,
+          "top": 168,
+          "text": "Gender",
+          "id": "51163a4e-96b1-4c77-9bf5-6c9124a4ea42"
+        }, {
+          "w": 120,
+          "h": 80,
+          "type": "finish",
+          "left": 494,
+          "top": 340,
+          "id": "476c3100-41a5-4298-81fd-1795e81ae47a",
+          "text": "FINISH"
+        }, {
+          "w": 120,
+          "h": 80,
+          "type": "process",
+          "left": 710.3130001607423,
+          "top": 165.5024238357675,
+          "text": "Extra Details",
+          "id": "6049e58d-6291-49f2-a803-9812e0b33199",
+          "controls": [{
+            "type": "input",
+            "controlType": "Textbox",
+            "label": "Maiden Name"
+          }]
+        }],
+        "edges": [{
+          "source": "3d4ac958-b00b-49b7-85df-0ded014a4be6",
+          "target": "cbfe475e-ad76-4136-9d9b-25e9ca4b7d10",
+          "data": {
+            "label": "",
+            "id": "b784e25a-446f-430c-9a88-17a79474560d",
+            "type": "default"
+          }
+        }, {
+          "source": "cbfe475e-ad76-4136-9d9b-25e9ca4b7d10",
+          "target": "51163a4e-96b1-4c77-9bf5-6c9124a4ea42",
+          "data": {
+            "label": "",
+            "id": "3d963d76-7994-499a-8a68-7ec02de94def",
+            "type": "connection"
+          }
+        }, {
+          "source": "51163a4e-96b1-4c77-9bf5-6c9124a4ea42",
+          "target": "476c3100-41a5-4298-81fd-1795e81ae47a",
+          "data": {
+            "label": "Male",
+            "id": "83c64be4-f8f5-4d87-aee8-51c2fbb7bba4",
+            "type": "connection"
+          }
+        }, {
+          "source": "51163a4e-96b1-4c77-9bf5-6c9124a4ea42",
+          "target": "6049e58d-6291-49f2-a803-9812e0b33199",
+          "data": {
+            "label": "Female",
+            "id": "abb631a2-c029-456e-abd8-846cd8306899",
+            "type": "connection"
+          }
+        }, {
+          "source": "6049e58d-6291-49f2-a803-9812e0b33199",
+          "target": "476c3100-41a5-4298-81fd-1795e81ae47a",
+          "data": {
+            "label": "",
+            "id": "99b17437-9439-4af2-b568-c7be6e8bdd83",
+            "type": "connection"
+          }
+        }],
+        "ports": [],
+        "groups": []
       }
     });
   };
@@ -2423,6 +2704,7 @@ define('spaircorp-ui/router', ['exports', 'ember', 'spaircorp-ui/config/environm
           });
         });
         this.route('new');
+        this.route('test', { path: '/test/:script_id' });
       });
       this.route('reports');
       this.route('dashboard');
@@ -2475,13 +2757,26 @@ define("spaircorp-ui/routes/admin/scripts/edit", ["exports", "ember"], function 
         }
       },
 
-      save: function save() {
-        alert('TODO');
-        return _ember["default"].RSVP.resolve();
+      save: function save(toolkit) {
+        var _this = this;
+
+        var model = this.modelFor(this.routeName);
+
+        var promise = model.save();
+
+        return promise.then(function () {
+          return toolkit.save({
+            url: "/scripts/" + model.id + "/diagram"
+          });
+        }).then(function () {
+          _this.get('notify').success('Save Successful!');
+        })["catch"](function () {
+          _this.get('notify').error('Unable to save!');
+        });
       },
 
       test: function test() {
-        alert('TODO');
+        this.transitionTo('admin.scripts.test', this.modelFor(this.routeName));
         return _ember["default"].RSVP.resolve();
       },
 
@@ -2516,27 +2811,26 @@ define('spaircorp-ui/routes/admin/scripts/edit/process/edit', ['exports', 'ember
         this.transitionTo('admin.scripts.edit', this.modelFor('admin.scripts.edit'));
       }
 
-      // add(obj/*, ops*/) {
-      //   debugger;
-      //   if (obj.origin === 'control-toolbox') {
-      //
-      //     bootbox.prompt("Label?", (label) => {
-      //       if (label) {
-      //         const model = this.modelFor(this.routeName);
-      //         model.data.controls.push({
-      //           type: 'textbox',
-      //           label: label
-      //         });
-      //       } else {
-      //         Ember.debug('Operation Cancelled');
-      //       }
-      //     });
-      //   }
-      // }
-
     }
   });
 });
+// add(obj/*, ops*/) {
+//   debugger;
+//   if (obj.origin === 'control-toolbox') {
+//
+//     bootbox.prompt("Label?", (label) => {
+//       if (label) {
+//         const model = this.modelFor(this.routeName);
+//         model.data.controls.push({
+//           type: 'textbox',
+//           label: label
+//         });
+//       } else {
+//         Ember.debug('Operation Cancelled');
+//       }
+//     });
+//   }
+// }
 define('spaircorp-ui/routes/admin/scripts/index', ['exports', 'ember'], function (exports, _ember) {
   exports['default'] = _ember['default'].Route.extend({
 
@@ -2588,6 +2882,20 @@ define('spaircorp-ui/routes/admin/scripts/new', ['exports', 'ember'], function (
       this.transitionTo('admin.scripts.edit', model);
     }
 
+  });
+});
+define('spaircorp-ui/routes/admin/scripts/test', ['exports', 'ember'], function (exports, _ember) {
+  exports['default'] = _ember['default'].Route.extend({
+
+    actions: {
+      save: function save(script) {
+        debugger;
+      },
+
+      end: function end(script) {
+        this.transitionTo('admin.scripts.edit', script);
+      }
+    }
   });
 });
 define('spaircorp-ui/routes/admin/user-management', ['exports', 'ember'], function (exports, _ember) {
@@ -2653,16 +2961,19 @@ define("spaircorp-ui/templates/admin/reports", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template({ "id": "D7KUGwYF", "block": "{\"statements\":[[\"open-element\",\"h1\",[]],[\"flush-element\"],[\"text\",\"TODO\"],[\"close-element\"],[\"text\",\"\\n\"],[\"append\",[\"unknown\",[\"outlet\"]],false],[\"text\",\"\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/reports.hbs" } });
 });
 define("spaircorp-ui/templates/admin/scripts", ["exports"], function (exports) {
-  exports["default"] = Ember.HTMLBars.template({ "id": "ICHzcUK9", "block": "{\"statements\":[[\"append\",[\"unknown\",[\"outlet\"]],false]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts.hbs" } });
+  exports["default"] = Ember.HTMLBars.template({ "id": "b2YgoHg5", "block": "{\"statements\":[[\"append\",[\"unknown\",[\"liquid-outlet\"]],false]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts.hbs" } });
 });
 define("spaircorp-ui/templates/admin/scripts/edit", ["exports"], function (exports) {
-  exports["default"] = Ember.HTMLBars.template({ "id": "uf6Xmpwx", "block": "{\"statements\":[[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-group\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"label\",[]],[\"static-attr\",\"for\",\"script-name\"],[\"flush-element\"],[\"text\",\"Name\"],[\"close-element\"],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"one-way-input\"],[[\"get\",[\"model\",\"name\"]]],[[\"placeholder\",\"update\",\"class\"],[\"Name\",[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"model\",\"name\"]]],null]],null],\"form-control\"]]],false],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"text\",\"\\n\"],[\"open-element\",\"hr\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"block\",[\"jsplumb-toolkit\"],null,[[\"data\",\"on-dbl-click-edge\",\"on-edit-node\",\"before-drop\"],[[\"helper\",[\"readonly\"],[[\"get\",[\"model\",\"diagram\"]]],null],[\"helper\",[\"route-action\"],[\"onDblClickEdge\"],null],[\"helper\",[\"route-action\"],[\"onEditNode\"],null],[\"helper\",[\"route-action\"],[\"beforeDrop\"],null]]],0],[\"text\",\"\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"row\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"hr\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"async-button\"],null,[[\"class\",\"action\",\"default\",\"pending\"],[\"btn btn-default col-xs-6\",[\"helper\",[\"route-action\"],[\"test\",[\"get\",[\"model\"]]],null],\"Test\",\"Please wait...\"]]],false],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"async-button\"],null,[[\"class\",\"action\",\"default\",\"pending\"],[\"btn btn-primary col-xs-6\",[\"helper\",[\"route-action\"],[\"save\",[\"get\",[\"model\"]]],null],\"Save\",\"Saving...\"]]],false],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\\n\\n\\n\\n\\n\"],[\"text\",\"\\n\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[{\"statements\":[[\"text\",\"\\n  \"],[\"append\",[\"unknown\",[\"outlet\"]],false],[\"text\",\"\\n\"]],\"locals\":[]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts/edit.hbs" } });
+  exports["default"] = Ember.HTMLBars.template({ "id": "aE6qNiTB", "block": "{\"statements\":[[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-group\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"label\",[]],[\"static-attr\",\"for\",\"script-name\"],[\"flush-element\"],[\"text\",\"Name\"],[\"close-element\"],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"one-way-input\"],[[\"get\",[\"model\",\"name\"]]],[[\"placeholder\",\"update\",\"class\"],[\"Name\",[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"model\",\"name\"]]],null]],null],\"form-control\"]]],false],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"text\",\"\\n\"],[\"open-element\",\"hr\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"block\",[\"jsplumb-toolkit\"],null,[[\"data\",\"on-dbl-click-edge\",\"on-edit-node\",\"before-drop\",\"save-url\"],[[\"helper\",[\"readonly\"],[[\"get\",[\"model\",\"diagram\"]]],null],[\"helper\",[\"route-action\"],[\"onDblClickEdge\"],null],[\"helper\",[\"route-action\"],[\"onEditNode\"],null],[\"helper\",[\"route-action\"],[\"beforeDrop\"],null],[\"helper\",[\"readonly\"],[[\"get\",[\"saveUrl\"]]],null]]],0],[\"text\",\"\\n\"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"row\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"hr\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"async-button\"],null,[[\"class\",\"action\",\"default\",\"pending\"],[\"btn btn-default col-xs-6\",[\"helper\",[\"route-action\"],[\"test\",[\"get\",[\"model\"]]],null],\"Test\",\"Please wait...\"]]],false],[\"text\",\"\\n  \"],[\"append\",[\"helper\",[\"async-button\"],null,[[\"class\",\"action\",\"default\",\"pending\"],[\"btn btn-primary col-xs-6\",[\"helper\",[\"route-action\"],[\"save\",[\"get\",[\"model\"]]],null],\"Save\",\"Saving...\"]]],false],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\\n\\n\\n\\n\\n\"],[\"text\",\"\\n\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[{\"statements\":[[\"text\",\"\\n  \"],[\"append\",[\"unknown\",[\"liquid-outlet\"]],false],[\"text\",\"\\n\"]],\"locals\":[]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts/edit.hbs" } });
 });
 define("spaircorp-ui/templates/admin/scripts/edit/process/edit", ["exports"], function (exports) {
-  exports["default"] = Ember.HTMLBars.template({ "id": "DuSha1C4", "block": "{\"statements\":[[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"animated slideInRight diagram-overlay\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"row\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"col-xs-12\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"button\",[]],[\"static-attr\",\"class\",\"btn btn-danger\"],[\"dynamic-attr\",\"onclick\",[\"helper\",[\"route-action\"],[\"close\"],null],null],[\"flush-element\"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-times fa-2x\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"append\",[\"helper\",[\"one-way-input\"],[[\"get\",[\"model\",\"obj\",\"data\",\"text\"]]],[[\"update\",\"class\"],[[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"model\",\"obj\",\"data\",\"text\"]]],null]],null],\"\"]]],false],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"row\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"col-xs-4\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"padding-left:3px; overflow-y: auto\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"h4\",[]],[\"flush-element\"],[\"text\",\"Controls\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"input\",\"Textbox\",\"control-toolbox\"]]]]],11],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"input\",\"Textarea\",\"control-toolbox\"]]]]],10],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"input\",\"Currency\",\"control-toolbox\"]]]]],9],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"input\",\"Date\",\"control-toolbox\"]]]]],8],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"input\",\"Number\",\"control-toolbox\"]]]]],7],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"options\",\"List\",\"control-toolbox\"]]]]],6],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"options\",\"Checkbox\",\"control-toolbox\"]]]]],5],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"options\",\"Radio\",\"control-toolbox\"]]]]],4],[\"text\",\"      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"col-xs-8\"],[\"flush-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object-target\"],null,[[\"action\",\"class\"],[\"add\",\"control-drop-area\"]],3],[\"text\",\"    \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\\n\\n\\n\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[{\"statements\":[[\"text\",\"              \"],[\"open-element\",\"div\",[]],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-2x fa-th js-control-drag-handle\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"static-attr\",\"style\",\"cursor: move\"],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n              \"],[\"close-element\"],[\"text\",\"\\n              \"],[\"append\",[\"helper\",[\"component\"],[[\"helper\",[\"concat\"],[\"config-\",[\"get\",[\"control\",\"type\"]],\"-control\"],null]],[[\"control\"],[[\"get\",[\"control\"]]]]],false],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"block\",[\"draggable-object\"],null,[[\"class\",\"content\",\"isSortable\",\"sortingScope\",\"dragHandle\"],[\"control-group\",[\"get\",[\"control\"]],true,\"sortingGroup\",\".js-control-drag-handle\"]],0]],\"locals\":[\"control\"]},{\"statements\":[[\"text\",\" \"],[\"text\",\"\\n\"],[\"block\",[\"each\"],[[\"get\",[\"model\",\"obj\",\"data\",\"controls\"]]],null,1]],\"locals\":[]},{\"statements\":[[\"text\",\"        \"],[\"block\",[\"sortable-objects\"],null,[[\"sortableObjectList\",\"enableSort\",\"useSwap\",\"sortingScope\"],[[\"get\",[\"model\",\"obj\",\"data\",\"controls\"]],true,true,\"sortingGroup\"]],2]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-stop-circle-o\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" Radio\\n          \"],[\"close-element\"],[\"text\",\"\\n\\n        \"],[\"comment\",\"\\n          <div class=\\\"radio form-control config-control\\\">\\n            <label>\\n              <input type=\\\"radio\\\" checked disabled> Radio\\n            </label>\\n          </div>\\n          \"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-check-square\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" Checkbox\\n          \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"comment\",\"\\n          <div class=\\\"checkbox form-control config-control\\\">\\n            <label>\\n              <input type=\\\"checkbox\\\" checked disabled> Checkbox\\n            </label>\\n          </div>\\n          \"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-list-ol\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" List\\n          \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"comment\",\"\\n          <select class=\\\"form-control config-control\\\" disabled>\\n            <option selected>List</option>\\n          </select>\\n          \"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-square\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"text\",\"123\"],[\"close-element\"],[\"text\",\" Number\\n          \"],[\"close-element\"],[\"text\",\"\\n\\n        \"],[\"comment\",\"\\n          <div class=\\\"input-group\\\">\\n            <span class=\\\"input-group-addon\\\">#</span>\\n            <input type=\\\"number\\\" class=\\\"form-control config-control\\\" readonly placeholder=\\\"Number\\\">\\n          </div>\\n          \"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-calendar\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" Date\\n          \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"comment\",\"\\n          <div class=\\\"input-group\\\">\\n            <span class=\\\"input-group-addon\\\"><i class=\\\"fa fa-calendar\\\" aria-hidden=\\\"true\\\"></i></span>\\n            <input type=\\\"date\\\" class=\\\"form-control config-control\\\" readonly value=\\\"Date Picker\\\">\\n          </div>\\n          \"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-money\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" Currency\\n          \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"comment\",\"\\n          <div class=\\\"input-group\\\">\\n            <span class=\\\"input-group-addon\\\">$</span>\\n            <input type=\\\"number\\\" class=\\\"form-control config-control\\\" readonly placeholder=\\\"Currency\\\">\\n          </div>\\n          \"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-text-height\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" Textarea\\n          \"],[\"close-element\"],[\"text\",\"\\n\\n          \"],[\"comment\",\"<textarea class=\\\"form-control config-control\\\" readonly>Text Area</textarea>\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-text-width\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" Textbox\\n          \"],[\"close-element\"],[\"text\",\"\\n\\n          \"],[\"comment\",\"<input class=\\\"form-control config-control\\\" value=\\\"Textbox\\\" readonly>\"],[\"text\",\"\\n\"]],\"locals\":[]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts/edit/process/edit.hbs" } });
+  exports["default"] = Ember.HTMLBars.template({ "id": "PzNHW0uj", "block": "{\"statements\":[[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"animated slideInRight diagram-overlay\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"row\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"col-xs-12\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"button\",[]],[\"static-attr\",\"class\",\"btn btn-danger\"],[\"dynamic-attr\",\"onclick\",[\"helper\",[\"route-action\"],[\"close\"],null],null],[\"flush-element\"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-times fa-2x\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"append\",[\"helper\",[\"one-way-input\"],[[\"get\",[\"model\",\"obj\",\"data\",\"text\"]]],[[\"update\",\"class\"],[[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"model\",\"obj\",\"data\",\"text\"]]],null]],null],\"\"]]],false],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"row\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"col-xs-4\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"padding-left:3px; overflow-y: auto\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"h4\",[]],[\"flush-element\"],[\"text\",\"Controls\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"input\",\"Textbox\",\"control-toolbox\"]]]]],11],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"input\",\"Textarea\",\"control-toolbox\"]]]]],10],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"input\",\"Currency\",\"control-toolbox\"]]]]],9],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"input\",\"Date\",\"control-toolbox\"]]]]],8],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"input\",\"Number\",\"control-toolbox\"]]]]],7],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"options\",\"List\",\"control-toolbox\"]]]]],6],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"options\",\"Checkbox\",\"control-toolbox\"]]]]],5],[\"text\",\"        \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object\"],null,[[\"content\"],[[\"helper\",[\"hash\"],null,[[\"type\",\"controlType\",\"origin\"],[\"options\",\"Radio\",\"control-toolbox\"]]]]],4],[\"text\",\"      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"col-xs-8\"],[\"flush-element\"],[\"text\",\"\\n\"],[\"block\",[\"draggable-object-target\"],null,[[\"action\",\"class\"],[\"add\",\"control-drop-area\"]],3],[\"text\",\"    \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\\n\\n\\n\\n\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[{\"statements\":[[\"text\",\"              \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"\"],[\"flush-element\"],[\"text\",\"\\n                \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-2x fa-th js-control-drag-handle\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"static-attr\",\"style\",\"cursor: move\"],[\"flush-element\"],[\"text\",\"\\n                  \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-times pull-right btn\"],[\"dynamic-attr\",\"onclick\",[\"helper\",[\"action\"],[[\"get\",[null]],\"delete\",[\"get\",[\"control\"]]],null],null],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n                \"],[\"close-element\"],[\"text\",\"\\n              \"],[\"close-element\"],[\"text\",\"\\n              \"],[\"append\",[\"helper\",[\"component\"],[[\"helper\",[\"concat\"],[\"config-\",[\"get\",[\"control\",\"type\"]],\"-control\"],null]],[[\"control\"],[[\"get\",[\"control\"]]]]],false],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"block\",[\"draggable-object\"],null,[[\"class\",\"content\",\"isSortable\",\"sortingScope\",\"dragHandle\"],[\"control-group\",[\"get\",[\"control\"]],true,\"sortingGroup\",\".js-control-drag-handle\"]],0]],\"locals\":[\"control\"]},{\"statements\":[[\"text\",\" \"],[\"text\",\"\\n\"],[\"block\",[\"each\"],[[\"get\",[\"model\",\"obj\",\"data\",\"controls\"]]],null,1]],\"locals\":[]},{\"statements\":[[\"text\",\"        \"],[\"block\",[\"sortable-objects\"],null,[[\"sortableObjectList\",\"enableSort\",\"useSwap\",\"sortingScope\"],[[\"get\",[\"model\",\"obj\",\"data\",\"controls\"]],true,true,\"sortingGroup\"]],2]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-stop-circle-o\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" Radio\\n          \"],[\"close-element\"],[\"text\",\"\\n\\n        \"],[\"comment\",\"\\n          <div class=\\\"radio form-control config-control\\\">\\n            <label>\\n              <input type=\\\"radio\\\" checked disabled> Radio\\n            </label>\\n          </div>\\n          \"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-check-square\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" Checkbox\\n          \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"comment\",\"\\n          <div class=\\\"checkbox form-control config-control\\\">\\n            <label>\\n              <input type=\\\"checkbox\\\" checked disabled> Checkbox\\n            </label>\\n          </div>\\n          \"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-list-ol\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" List\\n          \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"comment\",\"\\n          <select class=\\\"form-control config-control\\\" disabled>\\n            <option selected>List</option>\\n          </select>\\n          \"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-square\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"text\",\"123\"],[\"close-element\"],[\"text\",\" Number\\n          \"],[\"close-element\"],[\"text\",\"\\n\\n        \"],[\"comment\",\"\\n          <div class=\\\"input-group\\\">\\n            <span class=\\\"input-group-addon\\\">#</span>\\n            <input type=\\\"number\\\" class=\\\"form-control config-control\\\" readonly placeholder=\\\"Number\\\">\\n          </div>\\n          \"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-calendar\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" Date\\n          \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"comment\",\"\\n          <div class=\\\"input-group\\\">\\n            <span class=\\\"input-group-addon\\\"><i class=\\\"fa fa-calendar\\\" aria-hidden=\\\"true\\\"></i></span>\\n            <input type=\\\"date\\\" class=\\\"form-control config-control\\\" readonly value=\\\"Date Picker\\\">\\n          </div>\\n          \"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-money\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" Currency\\n          \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"comment\",\"\\n          <div class=\\\"input-group\\\">\\n            <span class=\\\"input-group-addon\\\">$</span>\\n            <input type=\\\"number\\\" class=\\\"form-control config-control\\\" readonly placeholder=\\\"Currency\\\">\\n          </div>\\n          \"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-text-height\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" Textarea\\n          \"],[\"close-element\"],[\"text\",\"\\n\\n          \"],[\"comment\",\"<textarea class=\\\"form-control config-control\\\" readonly>Text Area</textarea>\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"          \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-control dragable\"],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-text-width\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" Textbox\\n          \"],[\"close-element\"],[\"text\",\"\\n\\n          \"],[\"comment\",\"<input class=\\\"form-control config-control\\\" value=\\\"Textbox\\\" readonly>\"],[\"text\",\"\\n\"]],\"locals\":[]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts/edit/process/edit.hbs" } });
 });
 define("spaircorp-ui/templates/admin/scripts/index", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template({ "id": "dO5lSIw/", "block": "{\"statements\":[[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"row\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"col-xs-12\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"button\",[]],[\"static-attr\",\"class\",\"btn btn-success\"],[\"dynamic-attr\",\"onclick\",[\"helper\",[\"route-action\"],[\"create\"],null],null],[\"flush-element\"],[\"text\",\"New Script\"],[\"close-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"table\",[]],[\"static-attr\",\"class\",\"table table-striped border-left table-hover\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"thead\",[]],[\"flush-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"tr\",[]],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"th\",[]],[\"flush-element\"],[\"text\",\"Script\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"th\",[]],[\"flush-element\"],[\"text\",\"Date\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"th\",[]],[\"flush-element\"],[\"text\",\"Status\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"th\",[]],[\"flush-element\"],[\"text\",\"URL\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"th\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n      \"],[\"open-element\",\"tbody\",[]],[\"flush-element\"],[\"text\",\"\\n\"],[\"block\",[\"each\"],[[\"get\",[\"model\"]]],null,0],[\"text\",\"      \"],[\"close-element\"],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[{\"statements\":[[\"text\",\"        \"],[\"open-element\",\"tr\",[]],[\"flush-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"td\",[]],[\"flush-element\"],[\"append\",[\"unknown\",[\"script\",\"name\"]],false],[\"close-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"td\",[]],[\"flush-element\"],[\"append\",[\"helper\",[\"moment-format\"],[[\"get\",[\"script\",\"date\"]],\"DD-MM-YYYY\"],null],false],[\"close-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"td\",[]],[\"flush-element\"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"label label-success\"],[\"flush-element\"],[\"append\",[\"unknown\",[\"script\",\"status\"]],false],[\"close-element\"],[\"close-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"td\",[]],[\"flush-element\"],[\"open-element\",\"a\",[]],[\"dynamic-attr\",\"href\",[\"concat\",[[\"unknown\",[\"script\",\"url\"]]]]],[\"static-attr\",\"target\",\"_blank\"],[\"flush-element\"],[\"append\",[\"unknown\",[\"script\",\"url\"]],false],[\"close-element\"],[\"close-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"td\",[]],[\"flush-element\"],[\"text\",\"\\n            \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"pull-right\"],[\"flush-element\"],[\"text\",\"\\n              \"],[\"open-element\",\"button\",[]],[\"static-attr\",\"class\",\"btn btn-primary\"],[\"dynamic-attr\",\"onclick\",[\"helper\",[\"route-action\"],[\"edit\",[\"get\",[\"script\"]]],null],null],[\"flush-element\"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-pencil\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"close-element\"],[\"text\",\"\\n              \"],[\"open-element\",\"button\",[]],[\"static-attr\",\"class\",\"btn btn-danger\"],[\"dynamic-attr\",\"onclick\",[\"helper\",[\"route-action\"],[\"delete\",[\"get\",[\"script\"]]],null],null],[\"flush-element\"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-trash\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"close-element\"],[\"text\",\"\\n            \"],[\"close-element\"],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[\"script\"]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts/index.hbs" } });
+});
+define("spaircorp-ui/templates/admin/scripts/test", ["exports"], function (exports) {
+  exports["default"] = Ember.HTMLBars.template({ "id": "Tqs1vwvz", "block": "{\"statements\":[[\"open-element\",\"h1\",[]],[\"flush-element\"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-play-circle\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"text\",\" \"],[\"append\",[\"unknown\",[\"model\",\"name\"]],false],[\"text\",\" \"],[\"open-element\",\"small\",[]],[\"flush-element\"],[\"text\",\"(DEMO)\"],[\"close-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"append\",[\"helper\",[\"script-instance\"],null,[[\"script\",\"onFinish\",\"onEnd\"],[[\"get\",[\"model\"]],[\"helper\",[\"route-action\"],[\"save\"],null],[\"helper\",[\"route-action\"],[\"end\"],null]]]],false],[\"text\",\"\\n\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/scripts/test.hbs" } });
 });
 define("spaircorp-ui/templates/admin/user-management", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template({ "id": "h8weIULa", "block": "{\"statements\":[[\"append\",[\"unknown\",[\"outlet\"]],false],[\"text\",\"\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/admin/user-management.hbs" } });
@@ -2694,6 +3005,12 @@ define("spaircorp-ui/templates/components/jsplumb-toolkit", ["exports"], functio
 define("spaircorp-ui/templates/components/object-bin", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template({ "id": "m+7o/FOB", "block": "{\"statements\":[[\"block\",[\"draggable-object-target\"],null,[[\"action\"],[\"handleObjectDropped\"]],2]],\"locals\":[],\"named\":[],\"yields\":[\"default\"],\"blocks\":[{\"statements\":[[\"text\",\"      \"],[\"yield\",\"default\",[[\"get\",[\"obj\"]]]],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"block\",[\"draggable-object\"],null,[[\"action\",\"content\"],[\"handleObjectDragged\",[\"get\",[\"obj\"]]]],0]],\"locals\":[\"obj\"]},{\"statements\":[[\"text\",\"  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"object-bin-title\"],[\"flush-element\"],[\"append\",[\"unknown\",[\"name\"]],false],[\"close-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"br\",[]],[\"flush-element\"],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"each\"],[[\"get\",[\"model\"]]],null,1]],\"locals\":[]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/components/object-bin.hbs" } });
 });
+define("spaircorp-ui/templates/components/script-instance", ["exports"], function (exports) {
+  exports["default"] = Ember.HTMLBars.template({ "id": "FJQ2myX+", "block": "{\"statements\":[[\"open-element\",\"section\",[]],[\"static-attr\",\"class\",\"well\"],[\"flush-element\"],[\"text\",\"\\n\"],[\"block\",[\"liquid-bind\"],[[\"get\",[\"currentNode\"]]],[[\"use\"],[\"toLeft\"]],2],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"open-element\",\"section\",[]],[\"static-attr\",\"class\",\"pull-left\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"open-element\",\"button\",[]],[\"static-attr\",\"type\",\"button\"],[\"static-attr\",\"class\",\"btn btn-danger\"],[\"dynamic-attr\",\"onclick\",[\"helper\",[\"action\"],[[\"get\",[null]],[\"arg\",[\"onEnd\"]],[\"get\",[\"script\"]]],null],null],[\"flush-element\"],[\"text\",\"End\"],[\"close-element\"],[\"text\",\"\\n\"],[\"close-element\"],[\"text\",\"\\n\"],[\"open-element\",\"section\",[]],[\"static-attr\",\"class\",\"pull-right\"],[\"flush-element\"],[\"text\",\"\\n\"],[\"block\",[\"if\"],[[\"get\",[\"canPressPreviousButton\"]]],null,1],[\"block\",[\"if\"],[[\"get\",[\"canPressNextButton\"]]],null,0],[\"close-element\"]],\"locals\":[],\"named\":[\"onEnd\"],\"yields\":[],\"blocks\":[{\"statements\":[[\"text\",\"    \"],[\"open-element\",\"button\",[]],[\"static-attr\",\"type\",\"button\"],[\"static-attr\",\"class\",\"btn btn-primary\"],[\"dynamic-attr\",\"onClick\",[\"helper\",[\"action\"],[[\"get\",[null]],\"advance\",[\"get\",[\"currentNode\"]]],null],null],[\"flush-element\"],[\"text\",\"Next\"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"    \"],[\"open-element\",\"button\",[]],[\"static-attr\",\"type\",\"button\"],[\"static-attr\",\"class\",\"btn btn-default\"],[\"dynamic-attr\",\"onClick\",[\"helper\",[\"action\"],[[\"get\",[null]],\"goTo\",[\"get\",[\"previousNode\"]]],null],null],[\"flush-element\"],[\"text\",\"Back\"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"    \"],[\"append\",[\"helper\",[\"log\"],[\"Rendering Process:\",[\"get\",[\"currentNode\"]]],null],false],[\"text\",\"\\n    \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"style\",\"padding: 5px\"],[\"flush-element\"],[\"text\",\"\\n      \"],[\"append\",[\"helper\",[\"script-step\"],null,[[\"step\"],[[\"get\",[\"boundCurrentNode\"]]]]],false],[\"text\",\"\\n    \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[\"boundCurrentNode\"]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/components/script-instance.hbs" } });
+});
+define("spaircorp-ui/templates/components/script-step", ["exports"], function (exports) {
+  exports["default"] = Ember.HTMLBars.template({ "id": "4pZuyHBS", "block": "{\"statements\":[[\"append\",[\"helper\",[\"log\"],[\"Rendering Process:\",[\"get\",[\"step\"]]],null],false],[\"text\",\"\\n\"],[\"open-element\",\"p\",[]],[\"static-attr\",\"class\",\"lead\"],[\"flush-element\"],[\"append\",[\"unknown\",[\"step\",\"text\"]],false],[\"close-element\"],[\"text\",\"\\n\"],[\"block\",[\"each\"],[[\"get\",[\"step\",\"controls\"]]],null,17],[\"text\",\"\\n\"]],\"locals\":[],\"named\":[],\"yields\":[],\"blocks\":[{\"statements\":[[\"text\",\"        \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"radio\"],[\"flush-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"label\",[]],[\"flush-element\"],[\"text\",\"\\n            \"],[\"append\",[\"helper\",[\"one-way-radio\"],[[\"get\",[\"control\",\"answer\"]]],[[\"option\",\"update\"],[[\"get\",[\"value\"]],[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"control\",\"answer\"]]],null]],null]]]],false],[\"text\",\" \"],[\"append\",[\"get\",[\"value\"]],false],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[\"value\"]},{\"statements\":[[\"block\",[\"each\"],[[\"helper\",[\"split\"],[[\"get\",[\"control\",\"options\"]]],[[\"separator\"],[\",\"]]]],null,0],[\"text\",\"    \"]],\"locals\":[]},{\"statements\":[[\"block\",[\"if\"],[[\"helper\",[\"eq\"],[[\"get\",[\"control\",\"controlType\"]],\"Radio\"],null]],null,1]],\"locals\":[]},{\"statements\":[[\"text\",\"        \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"checkbox\"],[\"flush-element\"],[\"text\",\"\\n          \"],[\"open-element\",\"label\",[]],[\"flush-element\"],[\"text\",\"\\n            \"],[\"append\",[\"helper\",[\"one-way-checkbox\"],[[\"get\",[\"control\",\"answer\"]]],[[\"option\",\"update\"],[[\"get\",[\"value\"]],[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"control\",\"answer\"]]],null]],null]]]],false],[\"text\",\" \"],[\"append\",[\"get\",[\"value\"]],false],[\"text\",\"\\n          \"],[\"close-element\"],[\"text\",\"\\n        \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[\"value\"]},{\"statements\":[[\"block\",[\"each\"],[[\"helper\",[\"split\"],[[\"get\",[\"control\",\"options\"]]],[[\"separator\"],[\",\"]]]],null,3]],\"locals\":[]},{\"statements\":[[\"block\",[\"if\"],[[\"helper\",[\"eq\"],[[\"get\",[\"control\",\"controlType\"]],\"Checkbox\"],null]],null,4,2]],\"locals\":[]},{\"statements\":[[\"text\",\"      \"],[\"append\",[\"helper\",[\"one-way-select\"],[[\"get\",[\"control\",\"answer\"]]],[[\"update\",\"options\",\"class\"],[[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"control\",\"answer\"]]],null]],null],[\"helper\",[\"split\"],[[\"get\",[\"control\",\"options\"]]],[[\"separator\"],[\",\"]]],\"form-control\"]]],false],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"block\",[\"if\"],[[\"helper\",[\"eq\"],[[\"get\",[\"control\",\"controlType\"]],\"List\"],null]],null,6,5]],\"locals\":[]},{\"statements\":[[\"text\",\"      \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"input-group\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"input-group-addon\"],[\"flush-element\"],[\"open-element\",\"i\",[]],[\"static-attr\",\"class\",\"fa fa-calendar\"],[\"static-attr\",\"aria-hidden\",\"true\"],[\"flush-element\"],[\"close-element\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"append\",[\"helper\",[\"one-way-input\"],[[\"get\",[\"control\",\"answer\"]]],[[\"update\",\"class\",\"type\"],[[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"control\",\"answer\"]]],null]],null],\"form-control\",\"date\"]]],false],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"block\",[\"if\"],[[\"helper\",[\"eq\"],[[\"get\",[\"control\",\"controlType\"]],\"Date\"],null]],null,8,7]],\"locals\":[]},{\"statements\":[[\"text\",\"      \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"input-group\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"input-group-addon\"],[\"flush-element\"],[\"text\",\"#\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"append\",[\"helper\",[\"one-way-input\"],[[\"get\",[\"control\",\"answer\"]]],[[\"update\",\"class\",\"type\"],[[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"control\",\"answer\"]]],null]],null],\"form-control\",\"number\"]]],false],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"block\",[\"if\"],[[\"helper\",[\"eq\"],[[\"get\",[\"control\",\"controlType\"]],\"Number\"],null]],null,10,9]],\"locals\":[]},{\"statements\":[[\"text\",\"      \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"input-group\"],[\"flush-element\"],[\"text\",\"\\n        \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"input-group-addon\"],[\"flush-element\"],[\"text\",\"$\"],[\"close-element\"],[\"text\",\"\\n        \"],[\"append\",[\"helper\",[\"one-way-input\"],[[\"get\",[\"control\",\"answer\"]]],[[\"update\",\"class\",\"type\"],[[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"control\",\"answer\"]]],null]],null],\"form-control\",\"number\"]]],false],[\"text\",\"\\n      \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"block\",[\"if\"],[[\"helper\",[\"eq\"],[[\"get\",[\"control\",\"controlType\"]],\"Currency\"],null]],null,12,11]],\"locals\":[]},{\"statements\":[[\"text\",\"      \"],[\"append\",[\"helper\",[\"one-way-textarea\"],[[\"get\",[\"control\",\"answer\"]]],[[\"update\",\"class\",\"type\",\"rows\"],[[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"control\",\"answer\"]]],null]],null],\"form-control\",\"text\",5]]],false],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"block\",[\"if\"],[[\"helper\",[\"eq\"],[[\"get\",[\"control\",\"controlType\"]],\"Textarea\"],null]],null,14,13]],\"locals\":[]},{\"statements\":[[\"text\",\"      \"],[\"append\",[\"helper\",[\"one-way-input\"],[[\"get\",[\"control\",\"answer\"]]],[[\"update\",\"class\",\"type\"],[[\"helper\",[\"action\"],[[\"get\",[null]],[\"helper\",[\"mut\"],[[\"get\",[\"control\",\"answer\"]]],null]],null],\"form-control\",\"text\"]]],false],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"  \"],[\"open-element\",\"div\",[]],[\"static-attr\",\"class\",\"form-group\"],[\"flush-element\"],[\"text\",\"\\n    \"],[\"open-element\",\"label\",[]],[\"static-attr\",\"class\",\"control-label\"],[\"flush-element\"],[\"append\",[\"unknown\",[\"control\",\"label\"]],false],[\"close-element\"],[\"text\",\"\\n\\n\"],[\"block\",[\"if\"],[[\"helper\",[\"eq\"],[[\"get\",[\"control\",\"controlType\"]],\"Textbox\"],null]],null,16,15],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[\"control\"]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/components/script-step.hbs" } });
+});
 define("spaircorp-ui/templates/components/side-menu-toggle", ["exports"], function (exports) {
   exports["default"] = Ember.HTMLBars.template({ "id": "l8mUSypO", "block": "{\"statements\":[[\"block\",[\"if\"],[[\"has-block\",\"default\"]],null,1,0]],\"locals\":[],\"named\":[],\"yields\":[\"default\"],\"blocks\":[{\"statements\":[[\"text\",\"  \"],[\"open-element\",\"span\",[]],[\"static-attr\",\"class\",\"toggle-bars\"],[\"flush-element\"],[\"text\",\"\\n  \"],[\"close-element\"],[\"text\",\"\\n\"]],\"locals\":[]},{\"statements\":[[\"text\",\"  \"],[\"yield\",\"default\"],[\"text\",\"\\n\"]],\"locals\":[]}],\"hasPartials\":false}", "meta": { "moduleName": "spaircorp-ui/templates/components/side-menu-toggle.hbs" } });
 });
@@ -2707,7 +3024,7 @@ define('spaircorp-ui/tests/mirage/mirage/config.lint-test', ['exports'], functio
   QUnit.module('ESLint - mirage/config.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(true, 'mirage/config.js should pass ESLint.\n');
+    assert.ok(false, 'mirage/config.js should pass ESLint.\n33:5  - Unexpected \'debugger\' statement. (no-debugger)');
   });
 });
 define('spaircorp-ui/tests/mirage/mirage/factories/script.lint-test', ['exports'], function (exports) {
@@ -2728,7 +3045,7 @@ define('spaircorp-ui/tests/mirage/mirage/scenarios/default.lint-test', ['exports
   QUnit.module('ESLint - mirage/scenarios/default.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(false, 'mirage/scenarios/default.js should pass ESLint.\n10:9  - \'script1\' is assigned a value but never used. (no-unused-vars)\n26:9  - \'script2\' is assigned a value but never used. (no-unused-vars)');
+    assert.ok(false, 'mirage/scenarios/default.js should pass ESLint.\n10:9  - \'script1\' is assigned a value but never used. (no-unused-vars)\n26:9  - \'script2\' is assigned a value but never used. (no-unused-vars)\n179:9  - \'script3\' is assigned a value but never used. (no-unused-vars)');
   });
 });
 define('spaircorp-ui/tests/mirage/mirage/serializers/script.lint-test', ['exports'], function (exports) {
@@ -2753,6 +3070,10 @@ define('spaircorp-ui/transitions', ['exports'], function (exports) {
   exports['default'] = function () {
 
     this.transition(this.fromRoute('admin.scripts.edit.index'), this.toRoute('admin.scripts.edit.process-step'), this.use('toLeft'));
+
+    //this.reverse('toRight')
+    this.transition(this.fromRoute('admin.scripts.test'), this.toRoute('admin.scripts.edit'), this.use('fade'), this.reverse('fade'));
+
     /*
       this.transition(
         this.toRoute([function(routeName){ return true }, function(routeName){ return true }]),
@@ -2761,7 +3082,6 @@ define('spaircorp-ui/transitions', ['exports'], function (exports) {
     */
   };
 
-  //this.reverse('toRight')
   ;
 });
 define('spaircorp-ui/transitions/cross-fade', ['exports', 'liquid-fire/transitions/cross-fade'], function (exports, _liquidFireTransitionsCrossFade) {
@@ -2912,7 +3232,7 @@ catch(err) {
 /* jshint ignore:start */
 
 if (!runningTests) {
-  require("spaircorp-ui/app")["default"].create({"name":"spaircorp-ui","version":"0.0.0+f4883ab2"});
+  require("spaircorp-ui/app")["default"].create({"name":"spaircorp-ui","version":"0.0.0+2f733a45"});
 }
 
 /* jshint ignore:end */
