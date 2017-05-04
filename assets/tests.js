@@ -230,6 +230,15 @@ define('spaircorp-ui/tests/models/script.lint-test', ['exports'], function (expo
     assert.ok(true, 'models/script.js should pass ESLint.\n');
   });
 });
+define('spaircorp-ui/tests/models/user.lint-test', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('ESLint - models/user.js');
+  QUnit.test('should pass ESLint', function (assert) {
+    assert.expect(1);
+    assert.ok(true, 'models/user.js should pass ESLint.\n');
+  });
+});
 define('spaircorp-ui/tests/resolver.lint-test', ['exports'], function (exports) {
   'use strict';
 
@@ -724,6 +733,28 @@ define('spaircorp-ui/tests/unit/models/textbox-control-test.lint-test', ['export
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
     assert.ok(true, 'unit/models/textbox-control-test.js should pass ESLint.\n');
+  });
+});
+define('spaircorp-ui/tests/unit/models/user-test', ['exports', 'ember-qunit'], function (exports, _emberQunit) {
+
+  (0, _emberQunit.moduleForModel)('user', 'Unit | Model | user', {
+    // Specify the other units that are required for this test.
+    needs: []
+  });
+
+  (0, _emberQunit.test)('it exists', function (assert) {
+    var model = this.subject();
+    // let store = this.store();
+    assert.ok(!!model);
+  });
+});
+define('spaircorp-ui/tests/unit/models/user-test.lint-test', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('ESLint - unit/models/user-test.js');
+  QUnit.test('should pass ESLint', function (assert) {
+    assert.expect(1);
+    assert.ok(true, 'unit/models/user-test.js should pass ESLint.\n');
   });
 });
 define('spaircorp-ui/tests/unit/transforms/raw-test', ['exports', 'ember-qunit'], function (exports, _emberQunit) {
