@@ -5503,3 +5503,7 @@ button.close {
 
 .dragable {
   cursor: move; }
+  .dragable:hover {
+    outline-style: dashed;
+    outline-width: thin;
+    outline-color: #2ea8e5; }
