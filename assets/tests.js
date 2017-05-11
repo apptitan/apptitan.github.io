@@ -9,6 +9,15 @@ define('spaircorp-ui/tests/app.lint-test', ['exports'], function (exports) {
     assert.ok(true, 'app.js should pass ESLint.\n');
   });
 });
+define('spaircorp-ui/tests/components/config-decision-control.lint-test', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('ESLint - components/config-decision-control.js');
+  QUnit.test('should pass ESLint', function (assert) {
+    assert.expect(1);
+    assert.ok(true, 'components/config-decision-control.js should pass ESLint.\n');
+  });
+});
 define('spaircorp-ui/tests/components/config-input-control.lint-test', ['exports'], function (exports) {
   'use strict';
 
@@ -308,7 +317,7 @@ define('spaircorp-ui/tests/routes/admin/scripts/edit/process/edit.lint-test', ['
   QUnit.module('ESLint - routes/admin/scripts/edit/process/edit.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(false, 'routes/admin/scripts/edit/process/edit.js should pass ESLint.\n7:9  - \'params\' is defined but never used. (no-unused-vars)');
+    assert.ok(false, 'routes/admin/scripts/edit/process/edit.js should pass ESLint.\n7:9  - \'params\' is defined but never used. (no-unused-vars)\n42:5  - Unexpected \'debugger\' statement. (no-debugger)');
   });
 });
 define('spaircorp-ui/tests/routes/admin/scripts/index.lint-test', ['exports'], function (exports) {
