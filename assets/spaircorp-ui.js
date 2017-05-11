@@ -2852,9 +2852,14 @@ define('spaircorp-ui/routes/admin/scripts/edit/process/edit', ['exports', 'ember
       });
       if (decisionConnection) {
         (function () {
-          // ************ Temporary
-          //decisionConnection.target.data.label = decisionConnection.target.data.text;
+          // Remove existing one
+          var existingItem = model.obj.data.controls.find(function (item) {
+            return item.type === 'decision';
+          });
+          debugger;
+          model.obj.data.controls.removeObject(existingItem);
 
+          // Add new one
           var options = [];
           decisionConnection.target.getSourceEdges().forEach(function (item) {
             options.push({
@@ -2863,8 +2868,8 @@ define('spaircorp-ui/routes/admin/scripts/edit/process/edit', ['exports', 'ember
             });
           });
           // targetType: item.target.data.type
-          decisionConnection.target.data.options = options;
-          // END *****************
+          _ember['default'].set(decisionConnection, 'target.data.options', options);
+
           model.obj.data.controls.push(decisionConnection.target.data);
         })();
       }

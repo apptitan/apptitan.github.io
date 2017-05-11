@@ -317,7 +317,7 @@ define('spaircorp-ui/tests/routes/admin/scripts/edit/process/edit.lint-test', ['
   QUnit.module('ESLint - routes/admin/scripts/edit/process/edit.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(false, 'routes/admin/scripts/edit/process/edit.js should pass ESLint.\n7:9  - \'params\' is defined but never used. (no-unused-vars)\n42:5  - Unexpected \'debugger\' statement. (no-debugger)');
+    assert.ok(false, 'routes/admin/scripts/edit/process/edit.js should pass ESLint.\n7:9  - \'params\' is defined but never used. (no-unused-vars)\n30:7  - Unexpected \'debugger\' statement. (no-debugger)\n47:5  - Unexpected \'debugger\' statement. (no-debugger)');
   });
 });
 define('spaircorp-ui/tests/routes/admin/scripts/index.lint-test', ['exports'], function (exports) {
