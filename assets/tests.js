@@ -60,7 +60,7 @@ define('spaircorp-ui/tests/components/jsplumb-toolkit.lint-test', ['exports'], f
   QUnit.module('ESLint - components/jsplumb-toolkit.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(false, 'components/jsplumb-toolkit.js should pass ESLint.\n13:7  - \'EMPTY_FUNCTION\' is assigned a value but never used. (no-unused-vars)\n33:5  - \'jsPlumbToolkit\' is not defined. (no-undef)\n43:23  - \'jsPlumbToolkit\' is not defined. (no-undef)\n56:15  - \'bootbox\' is not defined. (no-undef)\n68:15  - \'bootbox\' is not defined. (no-undef)\n76:13  - \'bootbox\' is not defined. (no-undef)\n86:31  - \'jsPlumbToolkitUtil\' is not defined. (no-undef)\n96:23  - \'jsPlumbToolkitUtil\' is not defined. (no-undef)\n102:39  - \'edgeData\' is defined but never used. (no-unused-vars)\n105:13  - \'bootbox\' is not defined. (no-undef)\n117:13  - \'bootbox\' is not defined. (no-undef)\n123:13  - \'bootbox\' is not defined. (no-undef)\n129:36  - \'edgeType\' is defined but never used. (no-unused-vars)\n143:46  - \'edge\' is defined but never used. (no-unused-vars)\n146:38  - \'edge\' is defined but never used. (no-unused-vars)\n149:43  - \'edge\' is defined but never used. (no-unused-vars)\n155:25  - \'msg\' is defined but never used. (no-unused-vars)\n159:27  - \'response\' is defined but never used. (no-unused-vars)\n179:9  - \'bootbox\' is not defined. (no-undef)\n350:23  - \'e\' is defined but never used. (no-unused-vars)\n369:13  - Unexpected console statement. (no-console)\n394:9  - \'jsPlumb\' is not defined. (no-undef)\n395:9  - \'jsPlumb\' is not defined. (no-undef)\n399:7  - \'jsPlumb\' is not defined. (no-undef)\n404:7  - \'jsPlumb\' is not defined. (no-undef)\n410:11  - \'jsPlumbToolkit\' is not defined. (no-undef)\n414:7  - \'jsPlumb\' is not defined. (no-undef)\n417:9  - \'bootbox\' is not defined. (no-undef)\n429:7  - \'jsPlumb\' is not defined. (no-undef)\n441:11  - \'bootbox\' is not defined. (no-undef)\n482:25  - \'type\' is defined but never used. (no-unused-vars)');
+    assert.ok(false, 'components/jsplumb-toolkit.js should pass ESLint.\n13:7  - \'EMPTY_FUNCTION\' is assigned a value but never used. (no-unused-vars)\n33:5  - \'jsPlumbToolkit\' is not defined. (no-undef)\n43:23  - \'jsPlumbToolkit\' is not defined. (no-undef)\n56:15  - \'bootbox\' is not defined. (no-undef)\n68:15  - \'bootbox\' is not defined. (no-undef)\n76:13  - \'bootbox\' is not defined. (no-undef)\n86:31  - \'jsPlumbToolkitUtil\' is not defined. (no-undef)\n96:23  - \'jsPlumbToolkitUtil\' is not defined. (no-undef)\n102:39  - \'edgeData\' is defined but never used. (no-unused-vars)\n105:13  - \'bootbox\' is not defined. (no-undef)\n117:13  - \'bootbox\' is not defined. (no-undef)\n123:13  - \'bootbox\' is not defined. (no-undef)\n129:36  - \'edgeType\' is defined but never used. (no-unused-vars)\n143:46  - \'edge\' is defined but never used. (no-unused-vars)\n146:38  - \'edge\' is defined but never used. (no-unused-vars)\n149:43  - \'edge\' is defined but never used. (no-unused-vars)\n155:25  - \'msg\' is defined but never used. (no-unused-vars)\n159:27  - \'response\' is defined but never used. (no-unused-vars)\n179:9  - \'bootbox\' is not defined. (no-undef)\n362:23  - \'e\' is defined but never used. (no-unused-vars)\n381:13  - Unexpected console statement. (no-console)\n406:9  - \'jsPlumb\' is not defined. (no-undef)\n407:9  - \'jsPlumb\' is not defined. (no-undef)\n411:7  - \'jsPlumb\' is not defined. (no-undef)\n416:7  - \'jsPlumb\' is not defined. (no-undef)\n422:11  - \'jsPlumbToolkit\' is not defined. (no-undef)\n426:7  - \'jsPlumb\' is not defined. (no-undef)\n429:9  - \'bootbox\' is not defined. (no-undef)\n441:7  - \'jsPlumb\' is not defined. (no-undef)\n453:11  - \'bootbox\' is not defined. (no-undef)\n494:25  - \'type\' is defined but never used. (no-unused-vars)');
   });
 });
 define('spaircorp-ui/tests/components/script-instance.lint-test', ['exports'], function (exports) {
@@ -69,7 +69,7 @@ define('spaircorp-ui/tests/components/script-instance.lint-test', ['exports'], f
   QUnit.module('ESLint - components/script-instance.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(false, 'components/script-instance.js should pass ESLint.\n8:9  - \'key\' is defined but never used. (no-unused-vars)\n61:15  - \'exitEdges\' is assigned a value but never used. (no-unused-vars)');
+    assert.ok(false, 'components/script-instance.js should pass ESLint.\n8:9  - \'key\' is defined but never used. (no-unused-vars)\n71:15  - \'exitEdges\' is assigned a value but never used. (no-unused-vars)');
   });
 });
 define('spaircorp-ui/tests/components/script-step.lint-test', ['exports'], function (exports) {
@@ -118,6 +118,56 @@ define('spaircorp-ui/tests/helpers/destroy-app.lint-test', ['exports'], function
     assert.expect(1);
     assert.ok(true, 'helpers/destroy-app.js should pass ESLint.\n');
   });
+});
+define('spaircorp-ui/tests/helpers/ember-drag-drop', ['exports', 'ember', 'jquery', 'ember-test', 'spaircorp-ui/tests/helpers/data-transfer'], function (exports, _ember, _jquery, _emberTest, _spaircorpUiTestsHelpersDataTransfer) {
+  exports.drag = drag;
+
+  function drop($dragHandle, dropCssPath, dragEvent) {
+    var $dropTarget = (0, _jquery['default'])(dropCssPath);
+
+    if ($dropTarget.length === 0) {
+      throw 'There are no drop targets by the given selector: \'' + dropCssPath + '\'';
+    }
+
+    _ember['default'].run(function () {
+      triggerEvent($dropTarget, 'dragover', _spaircorpUiTestsHelpersDataTransfer['default'].makeMockEvent());
+    });
+
+    _ember['default'].run(function () {
+      triggerEvent($dropTarget, 'drop', _spaircorpUiTestsHelpersDataTransfer['default'].makeMockEvent(dragEvent.dataTransfer.get('data.payload')));
+    });
+
+    _ember['default'].run(function () {
+      triggerEvent($dragHandle, 'dragend', _spaircorpUiTestsHelpersDataTransfer['default'].makeMockEvent());
+    });
+  }
+
+  function drag(cssPath) {
+    var options = arguments.length <= 1 || arguments[1] === undefined ? {} : arguments[1];
+
+    var dragEvent = _spaircorpUiTestsHelpersDataTransfer['default'].makeMockEvent();
+    var $dragHandle = (0, _jquery['default'])(cssPath);
+
+    _ember['default'].run(function () {
+      triggerEvent($dragHandle, 'mouseover');
+    });
+
+    _ember['default'].run(function () {
+      triggerEvent($dragHandle, 'dragstart', dragEvent);
+    });
+
+    andThen(function () {
+      if (options.beforeDrop) {
+        options.beforeDrop.call();
+      }
+    });
+
+    andThen(function () {
+      if (options.drop) {
+        drop($dragHandle, options.drop, dragEvent);
+      }
+    });
+  }
 });
 define('spaircorp-ui/tests/helpers/ember-sortable/test-helpers', ['exports', 'ember-sortable/helpers/drag', 'ember-sortable/helpers/reorder'], function (exports, _emberSortableHelpersDrag, _emberSortableHelpersReorder) {});
 define('spaircorp-ui/tests/helpers/fill-content-editable', ['exports', 'ember'], function (exports, _ember) {
@@ -308,7 +358,7 @@ define('spaircorp-ui/tests/routes/admin/scripts/edit.lint-test', ['exports'], fu
   QUnit.module('ESLint - routes/admin/scripts/edit.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(false, 'routes/admin/scripts/edit.js should pass ESLint.\n10:7  - \'bootbox\' is not defined. (no-undef)\n53:16  - \'params\' is defined but never used. (no-unused-vars)');
+    assert.ok(false, 'routes/admin/scripts/edit.js should pass ESLint.\n10:7  - \'bootbox\' is not defined. (no-undef)\n54:16  - \'params\' is defined but never used. (no-unused-vars)');
   });
 });
 define('spaircorp-ui/tests/routes/admin/scripts/edit/process/edit.lint-test', ['exports'], function (exports) {
@@ -318,6 +368,15 @@ define('spaircorp-ui/tests/routes/admin/scripts/edit/process/edit.lint-test', ['
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
     assert.ok(false, 'routes/admin/scripts/edit/process/edit.js should pass ESLint.\n7:9  - \'params\' is defined but never used. (no-unused-vars)\n30:7  - Unexpected \'debugger\' statement. (no-debugger)\n47:5  - Unexpected \'debugger\' statement. (no-debugger)');
+  });
+});
+define('spaircorp-ui/tests/routes/admin/scripts/edit/test.lint-test', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('ESLint - routes/admin/scripts/edit/test.js');
+  QUnit.test('should pass ESLint', function (assert) {
+    assert.expect(1);
+    assert.ok(false, 'routes/admin/scripts/edit/test.js should pass ESLint.\n10:18  - \'diagramWithAnswers\' is defined but never used. (no-unused-vars)\n11:7  - Unexpected \'debugger\' statement. (no-debugger)\n14:9  - \'script\' is defined but never used. (no-unused-vars)');
   });
 });
 define('spaircorp-ui/tests/routes/admin/scripts/index.lint-test', ['exports'], function (exports) {
@@ -336,15 +395,6 @@ define('spaircorp-ui/tests/routes/admin/scripts/new.lint-test', ['exports'], fun
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
     assert.ok(true, 'routes/admin/scripts/new.js should pass ESLint.\n');
-  });
-});
-define('spaircorp-ui/tests/routes/admin/scripts/test.lint-test', ['exports'], function (exports) {
-  'use strict';
-
-  QUnit.module('ESLint - routes/admin/scripts/test.js');
-  QUnit.test('should pass ESLint', function (assert) {
-    assert.expect(1);
-    assert.ok(false, 'routes/admin/scripts/test.js should pass ESLint.\n6:18  - \'diagramWithAnswers\' is defined but never used. (no-unused-vars)\n7:7  - Unexpected \'debugger\' statement. (no-debugger)');
   });
 });
 define('spaircorp-ui/tests/routes/admin/user-management.lint-test', ['exports'], function (exports) {
