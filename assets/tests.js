@@ -36,6 +36,15 @@ define('spaircorp-ui/tests/components/config-options-control.lint-test', ['expor
     assert.ok(true, 'components/config-options-control.js should pass ESLint.\n');
   });
 });
+define('spaircorp-ui/tests/components/config-text-control.lint-test', ['exports'], function (exports) {
+  'use strict';
+
+  QUnit.module('ESLint - components/config-text-control.js');
+  QUnit.test('should pass ESLint', function (assert) {
+    assert.expect(1);
+    assert.ok(true, 'components/config-text-control.js should pass ESLint.\n');
+  });
+});
 define('spaircorp-ui/tests/components/jsplumb-miniview.lint-test', ['exports'], function (exports) {
   'use strict';
 
@@ -96,7 +105,7 @@ define('spaircorp-ui/tests/controllers/admin/scripts/edit/process/edit.lint-test
   QUnit.module('ESLint - controllers/admin/scripts/edit/process/edit.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(false, 'controllers/admin/scripts/edit/process/edit.js should pass ESLint.\n8:9  - \'bootbox\' is not defined. (no-undef)');
+    assert.ok(false, 'controllers/admin/scripts/edit/process/edit.js should pass ESLint.\n17:11  - \'bootbox\' is not defined. (no-undef)');
   });
 });
 define('spaircorp-ui/tests/helpers/destroy-app', ['exports', 'ember'], function (exports, _ember) {
@@ -367,7 +376,7 @@ define('spaircorp-ui/tests/routes/admin/scripts/edit/process/edit.lint-test', ['
   QUnit.module('ESLint - routes/admin/scripts/edit/process/edit.js');
   QUnit.test('should pass ESLint', function (assert) {
     assert.expect(1);
-    assert.ok(false, 'routes/admin/scripts/edit/process/edit.js should pass ESLint.\n7:9  - \'params\' is defined but never used. (no-unused-vars)\n30:7  - Unexpected \'debugger\' statement. (no-debugger)\n47:5  - Unexpected \'debugger\' statement. (no-debugger)');
+    assert.ok(false, 'routes/admin/scripts/edit/process/edit.js should pass ESLint.\n7:9  - \'params\' is defined but never used. (no-unused-vars)\n30:7  - Unexpected \'debugger\' statement. (no-debugger)');
   });
 });
 define('spaircorp-ui/tests/routes/admin/scripts/edit/test.lint-test', ['exports'], function (exports) {
